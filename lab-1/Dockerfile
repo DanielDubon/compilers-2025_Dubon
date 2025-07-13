@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 # Esta parte no la necesitan realmente ustedes, pero igual, la voy a dejar comentada y lo escribo en español para su atención jaja
 # Esencialmente esta parte sirve cuando están detrás de una proxy y necesitan especificar explícitamente
@@ -63,7 +63,7 @@ RUN ./python-venv.sh
 
 COPY requirements.txt .
 # Not production-intended, never do this, this is just a simple example
-RUN pip install -r requirements.txt --break-system-packages 
+RUN pip3 install -r requirements.txt 
 
 # Set user
 ARG USER=appuser
