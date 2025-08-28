@@ -826,32 +826,6 @@ program
                 breakStatement
                   TOKEN(break)
                   TOKEN(;)
-              statement
-                printStatement
-                  TOKEN(print)
-                  TOKEN(()
-                  expression
-                    assignmentExpr
-                      conditionalExpr
-                        logicalOrExpr
-                          logicalAndExpr
-                            equalityExpr
-                              relationalExpr
-                                additiveExpr
-                                  multiplicativeExpr
-                                    unaryExpr
-                                      primaryExpr
-                                        literalExpr
-                                          TOKEN("5 + 1 = ")
-                                  TOKEN(+)
-                                  multiplicativeExpr
-                                    unaryExpr
-                                      primaryExpr
-                                        leftHandSide
-                                          primaryAtom
-                                            TOKEN(addFive)
-                  TOKEN())
-                  TOKEN(;)
               TOKEN(})
         TOKEN(})
   statement
@@ -2174,6 +2148,36 @@ program
                                 primaryAtom
                                   TOKEN(a)
       TOKEN(;)
+  statement
+    functionDeclaration
+      TOKEN(function)
+      TOKEN(f)
+      TOKEN(()
+      TOKEN())
+      TOKEN(:)
+      type
+        baseType
+          TOKEN(integer)
+      block
+        TOKEN({)
+        statement
+          returnStatement
+            TOKEN(return)
+            expression
+              assignmentExpr
+                conditionalExpr
+                  logicalOrExpr
+                    logicalAndExpr
+                      equalityExpr
+                        relationalExpr
+                          additiveExpr
+                            multiplicativeExpr
+                              unaryExpr
+                                primaryExpr
+                                  literalExpr
+                                    TOKEN(1)
+            TOKEN(;)
+        TOKEN(})
   statement
     printStatement
       TOKEN(print)

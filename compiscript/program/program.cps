@@ -131,5 +131,8 @@ let z: integer[] = [];      // [] -> array<unknown>, pero lo permitimos asignar 
 let s: string = "num: " + a; // concatenacion string+integer OK
 
 
+function f(): integer { return 1; }
+// function f(): integer { return 2; } //  ERRORRR
+
 // Program end
 print("Program finished.");

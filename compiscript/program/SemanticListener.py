@@ -9,6 +9,7 @@ from symbols import (
     type_equals, numeric_result, are_eq_comparable, are_order_comparable,
     can_concat_with_plus, is_assignable,
 )
+from typing import Optional, Tuple, Dict, List
 import sys
 
 class SemanticListener(CompiscriptListener):
@@ -19,11 +20,13 @@ class SemanticListener(CompiscriptListener):
         self.errors = []
         self.source_lines = source_lines
         self.types: dict[object, TypeLike] = {}
-        self.funcs: dict[str, tuple[list[TypeLike], TypeLike]] = {}
+        self.funcs: Dict[tuple[Optional[str], str], tuple[list[TypeLike], TypeLike]] = {}
         self.loop_depth = 0            
         self.func_ret_stack: list[TypeLike] = []  
         self.switch_depth = 0
         self.block_term_stack = []
+        self.class_stack: list[str] = []
+
 
 
 
@@ -300,12 +303,10 @@ class SemanticListener(CompiscriptListener):
             return
 
         
-        if name in self.funcs:
+        if self._is_global_func(name):
             if is_call_position:
-               
-                self.set_type(ctx, UNKNOWN)
+                self.set_type(ctx, UNKNOWN)   # lo tipa exitLeftHandSide
             else:
-                
                 self._err(ctx, f"No se puede usar la funcion '{name}' como valor; invócala con '()'.")
                 self.set_type(ctx, UNKNOWN)
             return
@@ -349,30 +350,26 @@ class SemanticListener(CompiscriptListener):
             cname = child.__class__.__name__
 
             if cname == "CallExprContext":
-               
-                base_name = None
+                
                 atom = ctx.primaryAtom()
-                if atom and atom.__class__.__name__ == "IdentifierExprContext":
-                    base_name = atom.getText()
+                base_name = atom.getText() if atom and atom.__class__.__name__ == "IdentifierExprContext" else None
 
-                if base_name and base_name in self.funcs:
-                    param_types, ret_t = self.funcs[base_name]
+                if base_name and self._is_global_func(base_name):
+                    
+                    param_types, ret_t = [], UNKNOWN
+                    for (cls, fname), sig in self.funcs.items():
+                        if cls is None and fname == base_name:
+                            param_types, ret_t = sig
+                            break
 
                     
-                    args_node = None
-                    if hasattr(child, "arguments"):
-                        try:
-                            args_node = child.arguments()
-                        except Exception:
-                            args_node = None
+                    args_node = child.arguments() if hasattr(child, "arguments") else None
                     if args_node is None:
-                        
                         for k in range(child.getChildCount()):
                             if child.getChild(k).__class__.__name__ == "ArgumentsContext":
                                 args_node = child.getChild(k)
                                 break
 
-                    
                     arg_types = []
                     if args_node:
                         exprs = args_node.expression()
@@ -381,18 +378,17 @@ class SemanticListener(CompiscriptListener):
                         for e in exprs:
                             arg_types.append(self.t(e))
 
-              
+                    
                     if len(arg_types) != len(param_types):
                         self._err(child, f"Llamada a '{base_name}' con {len(arg_types)} argumento(s), se esperaban {len(param_types)}.")
                     else:
-                      
-                        for idx, (pt, at) in enumerate(zip(param_types, arg_types), 1):
+                        for i_arg, (pt, at) in enumerate(zip(param_types, arg_types), 1):
                             if not is_assignable(pt, at):
-                                self._err(child, f"Argumento {idx} de '{base_name}' incompatible: se esperaba {pt}, se obtuvo {at}.")
+                                self._err(child, f"Argumento {i_arg} de '{base_name}' incompatible: se esperaba {pt}, se obtuvo {at}.")
 
-                    curr = ret_t  
+                    curr = ret_t
                 else:
-                   
+                    
                     curr = UNKNOWN
 
             elif cname == "IndexExprContext":
@@ -624,9 +620,15 @@ class SemanticListener(CompiscriptListener):
         params_nodes = ctx.parameters().parameter() if ctx.parameters() else []
         param_types = [(self._type_from_annotation(p.type_()) if p.type_() else UNKNOWN) for p in params_nodes]
         ret_t = self._type_from_annotation(ctx.type_()) if ctx.type_() else UNKNOWN
+        
+        current_class = self.class_stack[-1] if self.class_stack else None
+        key = (current_class, fname)
 
-        self.funcs[fname] = (param_types, ret_t)
-
+        if key in self.funcs:
+           
+            self._err(ctx, f"Funcion '{fname}' redeclarada.")
+        else:
+            self.funcs[key] = (param_types, ret_t)
        
         self.scopes.push()
         for p, ptype in zip(params_nodes, param_types):
@@ -635,9 +637,16 @@ class SemanticListener(CompiscriptListener):
             ok = self.scopes.declare(pname, VarInfo(pname, ptype, False, id_tok))
             if not ok:
                 self._err(p, f"Parametro '{pname}' redeclarado en la misma funcion.")
+        self.func_ret_stack.append(ret_t)
+                
+    def _is_global_func(self, name: str) -> bool:
+        for (cls, fname) in self.funcs.keys():
+            if cls is None and fname == name:
+                return True
+        return False
 
         
-        self.func_ret_stack.append(ret_t)
+    
 
     def exitFunctionDeclaration(self, ctx):
         self.scopes.pop()
@@ -745,4 +754,9 @@ class SemanticListener(CompiscriptListener):
     def enterStatement(self, ctx):
         self._check_unreachable(ctx)
 
+    def enterClassDeclaration(self, ctx):
+        cname = ctx.Identifier(0).getText()
+        self.class_stack.append(cname)
 
+    def exitClassDeclaration(self, ctx):
+        self.class_stack.pop()
