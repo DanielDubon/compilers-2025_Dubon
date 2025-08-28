@@ -20,6 +20,12 @@ class SemanticListener(CompiscriptListener):
         self.source_lines = source_lines
         self.types: dict[object, TypeLike] = {}
         self.funcs: dict[str, tuple[list[TypeLike], TypeLike]] = {}
+        self.loop_depth = 0            
+        self.func_ret_stack: list[TypeLike] = []  
+        self.switch_depth = 0
+        self.block_term_stack = []
+
+
 
     # ------------ Utilidades ----------------
 
@@ -58,6 +64,7 @@ class SemanticListener(CompiscriptListener):
     def enterBlock(self, ctx):
         # Abre un nuevo ambito
         self.scopes.push()
+        self.block_term_stack.append(False)
 
        
         parent = getattr(ctx, "parentCtx", None)
@@ -99,6 +106,16 @@ class SemanticListener(CompiscriptListener):
 
     def exitBlock(self, ctx):
         self.scopes.pop()
+        self.block_term_stack.pop()
+        
+    def _mark_terminator(self):
+        if self.block_term_stack:
+            self.block_term_stack[-1] = True
+
+    def _check_unreachable(self, ctx):
+        if self.block_term_stack and self.block_term_stack[-1]:
+            self._err(ctx, "Codigo inalcanzable: aparece despues de un return/break/continue.")
+
 
     # ----------- Declaraciones ----------------
 
@@ -265,36 +282,41 @@ class SemanticListener(CompiscriptListener):
         self.set_type(ctx, self.t(ctx.conditionalExpr()))
 
     def exitIdentifierExpr(self, ctx):
-       
-        parent = ctx.getParent() if hasattr(ctx, "getParent") else getattr(ctx, "parentCtx", None)
-        is_part_of_call = False
-
+        
+        parent = getattr(ctx, "parentCtx", None)
+        is_call_position = False
         if parent is not None and parent.__class__.__name__ == "LeftHandSideContext" and parent.getChildCount() >= 2:
             for i in range(1, parent.getChildCount()):
-                ch = parent.getChild(i)
-                cname = ch.__class__.__name__
-                if cname.endswith("CallExprContext"):       
-                    is_part_of_call = True
-                    break
-                if cname.endswith("PropertyAccessExprContext"):  
-                    is_part_of_call = True
-                    break
-                if cname.endswith("IndexExprContext"):     
-                    is_part_of_call = True
+                if parent.getChild(i).__class__.__name__ == "CallExprContext":
+                    is_call_position = True
                     break
 
         name = ctx.getText()
-        info = self.scopes.resolve(name)
 
-        if info is None:
-            
-            if is_part_of_call:
+        
+        info = self.scopes.resolve(name)
+        if info is not None:
+            self.set_type(ctx, info.type)
+            return
+
+        
+        if name in self.funcs:
+            if is_call_position:
+               
                 self.set_type(ctx, UNKNOWN)
             else:
-                self._err(ctx, "Uso de variable no declarada: '{}'.".format(name))
+                
+                self._err(ctx, f"No se puede usar la funcion '{name}' como valor; invócala con '()'.")
                 self.set_type(ctx, UNKNOWN)
+            return
+
+        
+        if is_call_position:
+            self._err(ctx, f"Llamada a identificador no declarado: '{name}'.")
         else:
-            self.set_type(ctx, info.type)
+            self._err(ctx, f"Uso de variable no declarada: '{name}'.")
+        self.set_type(ctx, UNKNOWN)
+
 
 
     def exitArrayLiteral(self, ctx):
@@ -567,21 +589,11 @@ class SemanticListener(CompiscriptListener):
     def exitIfStatement(self, ctx):
         self._check_boolean_cond(ctx.expression(), "if")
 
-    def exitWhileStatement(self, ctx):
-        self._check_boolean_cond(ctx.expression(), "while")
+    
 
-    def exitDoWhileStatement(self, ctx):
-        self._check_boolean_cond(ctx.expression(), "do-while")
+  
 
-    def exitForStatement(self, ctx):
-       
-        children = ctx.children or []
-       
-        exprs = [ch for ch in children if ch.__class__.__name__.endswith("ExpressionContext")]
-        if exprs:
-            cond_t = self.t(exprs[0])
-            if not is_boolean(cond_t):
-                self._err(exprs[0], "La condicion del for debe ser boolean.")
+    
 
     # ----------- Parse de anotaciones de tipo ----------------
 
@@ -613,10 +625,9 @@ class SemanticListener(CompiscriptListener):
         param_types = [(self._type_from_annotation(p.type_()) if p.type_() else UNKNOWN) for p in params_nodes]
         ret_t = self._type_from_annotation(ctx.type_()) if ctx.type_() else UNKNOWN
 
-        
         self.funcs[fname] = (param_types, ret_t)
 
-        
+       
         self.scopes.push()
         for p, ptype in zip(params_nodes, param_types):
             id_tok = p.Identifier().getSymbol()
@@ -625,9 +636,113 @@ class SemanticListener(CompiscriptListener):
             if not ok:
                 self._err(p, f"Parametro '{pname}' redeclarado en la misma funcion.")
 
+        
+        self.func_ret_stack.append(ret_t)
 
     def exitFunctionDeclaration(self, ctx):
-       
         self.scopes.pop()
+        
+        self.func_ret_stack.pop()
+
+    
+    def exitReturnStatement(self, ctx):
+        
+        if not self.func_ret_stack:
+            self._err(ctx, "return fuera de una funcion.")
+            return
+
+        expected = self.func_ret_stack[-1]
+        expr = getattr(ctx, "expression", None)
+        has_expr = False
+        expr_t = VOID
+
+        if callable(expr):
+            ex = ctx.expression()
+            if isinstance(ex, list):
+                ex = ex[0] if ex else None
+            if ex is not None:
+                has_expr = True
+                expr_t = self.t(ex)
+
+        if expected == VOID:
+            if has_expr:
+                self._err(ctx, f"La funcion es 'void' y no debe retornar valor (se obtuvo {expr_t}).")
+        else:
+            if not has_expr:
+                self._err(ctx, f"La funcion debe retornar {expected}, pero no se retorno valor.")
+            elif not is_assignable(expected, expr_t):
+                self._err(ctx, f"Tipo de retorno incompatible: se esperaba {expected}, se obtuvo {expr_t}.")
+        self._mark_terminator()
+
+   
+    def enterWhileStatement(self, ctx):
+        self.loop_depth += 1
+    def exitWhileStatement(self, ctx):
+        self._check_boolean_cond(ctx.expression(), "while")
+        self.loop_depth -= 1
+
+    def enterDoWhileStatement(self, ctx):
+        self.loop_depth += 1
+    def exitDoWhileStatement(self, ctx):
+        self._check_boolean_cond(ctx.expression(), "do-while")
+        self.loop_depth -= 1
+
+    def enterForStatement(self, ctx):
+        self.loop_depth += 1
+    def exitForStatement(self, ctx):
+        
+        children = ctx.children or []
+        exprs = [ch for ch in children if ch.__class__.__name__.endswith("ExpressionContext")]
+        if exprs:
+            cond_t = self.t(exprs[0])
+            if not is_boolean(cond_t):
+                self._err(exprs[0], "La condicion del for debe ser boolean.")
+        self.loop_depth -= 1
+
+    def enterForeachStatement(self, ctx):
+        self.loop_depth += 1
+
+    def exitForeachStatement(self, ctx):
+        self.loop_depth -= 1
+    
+    def exitBreakStatement(self, ctx):
+        if self.loop_depth == 0 and self.switch_depth == 0:
+            self._err(ctx, "'break' solo puede usarse dentro de un bucle o switch.")
+        self._mark_terminator()
+
+    def exitContinueStatement(self, ctx):
+        if self.loop_depth == 0:
+            self._err(ctx, "'continue' solo puede usarse dentro de un bucle.")
+        self._mark_terminator()
+    
+    def enterSwitchStatement(self, ctx):
+        self.switch_depth += 1
+
+    def exitSwitchStatement(self, ctx):
+        
+        sw_expr = getattr(ctx, "expression", None)
+        if callable(sw_expr):
+            sw_expr = ctx.expression()
+        sw_t = self.t(sw_expr) if sw_expr is not None else UNKNOWN
+
+        # ver cada case
+        cases = []
+        if hasattr(ctx, "caseClause"):
+            try:
+                cases = ctx.caseClause()
+            except Exception:
+                cases = []
+        for cc in (cases or []):
+            ce = getattr(cc, "expression", None)
+            if callable(ce):
+                ce = cc.expression()
+            ct = self.t(ce) if ce is not None else UNKNOWN
+            if not are_eq_comparable(sw_t, ct):
+                self._err(ce or cc, f"Tipo de 'case' incompatible con 'switch' ({sw_t} vs {ct}).")
+
+        self.switch_depth -= 1
+        
+    def enterStatement(self, ctx):
+        self._check_unreachable(ctx)
 
 

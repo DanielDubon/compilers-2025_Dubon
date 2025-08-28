@@ -119,7 +119,7 @@ let e: boolean = a < b;
 // Asignación (inferencia y chequeo)
 let x;        // desconocido
 x = 5;        // infiere integer
-x = "hola";   // ERROR: tipo incompatible
+// x = "hola";   // ERROR: tipo incompatible
 
 const K: integer = 7;
 // K = 8;     // ERROR: const no reasignable
