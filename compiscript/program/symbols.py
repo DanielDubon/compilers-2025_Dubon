@@ -86,6 +86,8 @@ def is_assignable(target: TypeLike, value: TypeLike) -> bool:
         return True
    
     if isinstance(target, ArrayType) and isinstance(value, ArrayType):
+        if is_unknown(value.elem) and not is_unknown(target.elem):
+            return False
         return is_assignable(target.elem, value.elem)
 
     if is_numeric(target) and is_numeric(value):

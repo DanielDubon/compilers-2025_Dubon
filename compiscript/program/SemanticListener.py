@@ -26,6 +26,16 @@ class SemanticListener(CompiscriptListener):
         self.switch_depth = 0
         self.block_term_stack = []
         self.class_stack: list[str] = []
+        self.class_fields: dict[str, dict[str, TypeLike]] = {}
+        self.class_extends: dict[str, Optional[str]] = {}
+        self.returns: dict[object, bool] = {}
+        self._switch_expr_nodes: list[object] = []
+        self._switch_types: list[TypeLike] = []
+        self.func_key_stack: list[tuple[Optional[str], str]] = []
+        self.func_locals: Dict[tuple[Optional[str], str], set[str]] = {}
+        self.func_captures: Dict[tuple[Optional[str], str], set[str]] = {}
+
+
 
 
 
@@ -110,6 +120,12 @@ class SemanticListener(CompiscriptListener):
     def exitBlock(self, ctx):
         self.scopes.pop()
         self.block_term_stack.pop()
+        always_returns = False
+        for st in (ctx.statement() or []):
+            if not always_returns:
+                if self._ret(st):
+                    always_returns = True
+        self._set_returns(ctx, always_returns)
         
     def _mark_terminator(self):
         if self.block_term_stack:
@@ -126,6 +142,43 @@ class SemanticListener(CompiscriptListener):
         id_tok = ctx.Identifier().getSymbol()
         name = id_tok.text
 
+        if self.class_stack and not self.func_ret_stack:
+            annotated = None
+            if ctx.typeAnnotation():
+                annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
+
+            rhs_node = None
+            if hasattr(ctx, "expression"):
+                try:
+                    rhs_node = ctx.expression()
+                except TypeError:
+                    try:
+                        rhs_node = ctx.expression(0)
+                    except Exception:
+                        rhs_node = None
+            if rhs_node is None and hasattr(ctx, "initializer") and ctx.initializer():
+                rhs_node = ctx.initializer().expression()
+
+            if rhs_node is None:
+                self._err(ctx, f"La constante de clase '{name}' debe inicializarse.")
+                return
+
+            rhs_t = self.t(rhs_node)
+            if annotated is not None and not self._is_assignable(annotated, rhs_t):
+                self._err(ctx, f"Tipo incompatible en inicializacion de const de clase '{name}': {annotated} vs {rhs_t}")
+                typ = annotated
+            else:
+                typ = annotated if annotated is not None else rhs_t
+
+            cname = self.class_stack[-1]
+            fields = self.class_fields.setdefault(cname, {})
+            if name in fields:
+                self._err(ctx, f"Campo '{name}' redeclarado en la clase '{cname}'.")
+            else:
+                fields[name] = typ
+                self._set_returns(ctx, False)
+            return
+        
         annotated = None
         if ctx.typeAnnotation():
             annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
@@ -153,7 +206,7 @@ class SemanticListener(CompiscriptListener):
         rhs_t = self.t(rhs_node)
 
        
-        if annotated is not None and not is_assignable(annotated, rhs_t):
+        if annotated is not None and not self._is_assignable(annotated, rhs_t):
             self._err(
                 ctx,
                 "Tipo incompatible en inicializacion de const '{}': se esperaba {}, se obtuvo {}."
@@ -166,12 +219,47 @@ class SemanticListener(CompiscriptListener):
         ok = self.scopes.declare(name, VarInfo(name, typ, True, id_tok))
         if not ok:
             self._err(ctx, "Redeclaracion de '{}' en el mismo ambito.".format(name))
+        else:
+            if self.func_key_stack:
+                self.func_locals[self.func_key_stack[-1]].add(name)
+        self._set_returns(ctx, False)
 
-
+    def exitPrintStatement(self, ctx):
+        
+        self._set_returns(ctx, False)
+    
+    def exitExpressionStatement(self, ctx):
+    
+        self._set_returns(ctx, False)
+        
     def exitVariableDeclaration(self, ctx):
         id_tok = ctx.Identifier().getSymbol()
         name = id_tok.text
 
+        if self.class_stack and not self.func_ret_stack:
+            annotated = None
+            if ctx.typeAnnotation():
+                annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
+
+            init_t = None
+            if ctx.initializer():
+                init_t = self.t(ctx.initializer().expression())
+
+            if annotated is None and init_t is not None:
+                var_t = init_t
+            else:
+                var_t = annotated if annotated is not None else UNKNOWN
+
+            cname = self.class_stack[-1]
+            fields = self.class_fields.setdefault(cname, {})
+            if name in fields:
+                self._err(ctx, f"Campo '{name}' redeclarado en la clase '{cname}'.")
+            else:
+                fields[name] = var_t
+                self._set_returns(ctx, False)
+            return
+
+        
         annotated = None
         if ctx.typeAnnotation():
             annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
@@ -188,47 +276,107 @@ class SemanticListener(CompiscriptListener):
 
       
         if annotated is not None and init_t is not None:
-            if not is_assignable(annotated, init_t):
-                self._err(ctx, "Tipo incompatible en inicializacion de variable '{}': se esperaba {}, se obtuvo {}."
+            if not self._is_assignable(annotated, init_t):
+                self._err(ctx, "Tipo incompatible en inicializacion de variable '{}': se esperaba {}, se obtuvo {}"
                           .format(name, annotated, init_t))
 
         ok = self.scopes.declare(name, VarInfo(name, var_t, False, id_tok))
         if not ok:
             self._err(ctx, "Redeclaracion de '{}' en el mismo ambito.".format(name))
+        self._set_returns(ctx, False)
+        if ok and self.func_key_stack:
+            self.func_locals[self.func_key_stack[-1]].add(name)
 
     # ---------- Asignaciones ----------------
 
     def exitAssignment(self, ctx):
-        
-        ids = ctx.Identifier()
-        name = (ids[0] if isinstance(ids, list) else ids).getText()
+        self._set_returns(ctx, False)
 
-        
         exprs = ctx.expression()
+
         if isinstance(exprs, list):
+           
+            if len(exprs) == 2 and hasattr(ctx, "Identifier") and ctx.Identifier():
+                obj_expr = exprs[0]
+                rhs_node = exprs[1]
+                obj_t = self.t(obj_expr)
+                member = ctx.Identifier().getText()
+                rhs_t = self.t(rhs_node)
+                self._check_property_assignment(ctx, obj_t, member, rhs_t)
+                return
+
+           
+            if len(exprs) == 3:
+                arr_expr, idx_expr, rhs_node = exprs[0], exprs[1], exprs[2]
+                arr_t = self.t(arr_expr)
+                idx_t = self.t(idx_expr)
+                rhs_t = self.t(rhs_node)
+
+                if not isinstance(arr_t, ArrayType):
+                    self._err(ctx, "Indexacion sobre un valor no-arreglo")
+                    return
+                if idx_t != INT:
+                    self._err(ctx, "El indice de un arreglo debe ser de tipo integer")
+                    return
+                if not self._is_assignable(arr_t.elem, rhs_t):
+                    self._err(ctx, f"Tipo incompatible en asignacion a elemento de arreglo: se esperaba {arr_t.elem}, se obtuvo {rhs_t}")
+                return
+
+           
             rhs_node = exprs[-1] if exprs else None
         else:
             rhs_node = exprs
 
         rhs_t = self.t(rhs_node) if rhs_node is not None else UNKNOWN
-        self._assign_to_name(ctx, name, rhs_t)
 
+        
+        ids = ctx.Identifier()
+        if ids:
+            name = (ids[0] if isinstance(ids, list) else ids).getText()
+            self._maybe_mark_capture(name)
+            self._assign_to_name(ctx, name, rhs_t)
+            return
+
+        
+        if isinstance(exprs, list) and exprs:
+            lhs_t = self.t(exprs[0])
+            if not self._is_assignable(lhs_t, rhs_t):
+                self._err(ctx, f"Tipo incompatible en asignacion: se esperaba {lhs_t}, se obtuvo {rhs_t}")
+
+
+
+    def _const_bool_expr(self, expr_ctx):
+        try:
+            txt = expr_ctx.getText()
+            if txt == "true":  return True
+            if txt == "false": return False
+        except Exception:
+            pass
+        return None
 
 
 
     def exitAssignExpr(self, ctx):
-      
         rhs_t = self.t(ctx.assignmentExpr())
-        
+
         lhs = ctx.leftHandSide()
-        base = lhs.primaryAtom()
-        if base is not None and base.getChildCount() == 1 and base.getChild(0).getText().isidentifier():
-            name = base.getChild(0).getText()
+        lhs_text = lhs.getText() if hasattr(lhs, "getText") else ""
+
+        
+        if lhs_text and lhs_text.isidentifier():
+            name = lhs_text
+            self._maybe_mark_capture(name)
             self._assign_to_name(ctx, name, rhs_t)
-            self.set_type(ctx, rhs_t) 
-        else:
-           
-            self.set_type(ctx, UNKNOWN)
+            self.set_type(ctx, rhs_t)
+            return
+
+        
+        lhs_t = self.t(lhs)
+        if not self._is_assignable(lhs_t, rhs_t):
+            self._err(ctx, f"Tipo incompatible en asignacion: se esperaba {lhs_t}, se obtuvo {rhs_t}.")
+       
+        self.set_type(ctx, rhs_t)
+
 
     def _assign_to_name(self, ctx, name: str, rhs_t: TypeLike):
         info = self.scopes.resolve(name)
@@ -243,7 +391,7 @@ class SemanticListener(CompiscriptListener):
         if is_unknown(info.type):
             info.type = rhs_t
             return
-        if not is_assignable(info.type, rhs_t):
+        if not self._is_assignable(info.type, rhs_t):
             self._err(ctx, "Tipo incompatible en asignacion a '{}': se esperaba {}, se obtuvo {}."
                       .format(name, info.type, rhs_t))
 
@@ -277,8 +425,18 @@ class SemanticListener(CompiscriptListener):
                 self.set_type(ctx, INT)
 
     def exitExpression(self, ctx):
-        
         self.set_type(ctx, self.t(ctx.assignmentExpr()))
+
+       
+        parent = getattr(ctx, "parentCtx", None)
+        if parent is not None and parent.__class__.__name__ == "SwitchStatementContext":
+            if self._switch_types:
+                self._switch_types[-1] = self.t(ctx)
+
+   
+        if self._switch_expr_nodes and ctx is self._switch_expr_nodes[-1]:
+            if self._switch_types:
+                self._switch_types[-1] = self.t(ctx)
 
     def exitExprNoAssign(self, ctx):
         
@@ -300,6 +458,7 @@ class SemanticListener(CompiscriptListener):
         info = self.scopes.resolve(name)
         if info is not None:
             self.set_type(ctx, info.type)
+            self._maybe_mark_capture(name)
             return
 
         
@@ -339,10 +498,8 @@ class SemanticListener(CompiscriptListener):
             self.set_type(ctx, ArrayType(elem_type))
 
     def exitLeftHandSide(self, ctx):
-        
         curr = self._type_of_primary_atom(ctx.primaryAtom())
 
-       
         n = ctx.getChildCount()
         i = 1
         while i < n:
@@ -355,46 +512,87 @@ class SemanticListener(CompiscriptListener):
                 base_name = atom.getText() if atom and atom.__class__.__name__ == "IdentifierExprContext" else None
 
                 if base_name and self._is_global_func(base_name):
-                    
-                    param_types, ret_t = [], UNKNOWN
+                    # recuperar firma global (cls=None)
+                    param_types, ret_t = None, UNKNOWN
                     for (cls, fname), sig in self.funcs.items():
                         if cls is None and fname == base_name:
                             param_types, ret_t = sig
                             break
-
-                    
-                    args_node = child.arguments() if hasattr(child, "arguments") else None
-                    if args_node is None:
-                        for k in range(child.getChildCount()):
-                            if child.getChild(k).__class__.__name__ == "ArgumentsContext":
-                                args_node = child.getChild(k)
-                                break
-
-                    arg_types = []
-                    if args_node:
-                        exprs = args_node.expression()
-                        if not isinstance(exprs, list):
-                            exprs = [exprs] if exprs else []
-                        for e in exprs:
-                            arg_types.append(self.t(e))
-
-                    
-                    if len(arg_types) != len(param_types):
-                        self._err(child, f"Llamada a '{base_name}' con {len(arg_types)} argumento(s), se esperaban {len(param_types)}.")
+                    arg_types = [ self.t(e) for e in self._extract_arg_exprs(child) ]
+                    if param_types is not None:
+                        if len(arg_types) != len(param_types):
+                            self._err(child, f"Llamada a '{base_name}' con {len(arg_types)} argumento(s), se esperaban {len(param_types)}.")
+                        else:
+                            for j, (pt, at) in enumerate(zip(param_types, arg_types), 1):
+                                if not self._is_assignable(pt, at):
+                                    self._err(child, f"Argumento {j} de '{base_name}' incompatible: se esperaba {pt}, se obtuvo {at}.")
+                        curr = ret_t
                     else:
-                        for i_arg, (pt, at) in enumerate(zip(param_types, arg_types), 1):
-                            if not is_assignable(pt, at):
-                                self._err(child, f"Argumento {i_arg} de '{base_name}' incompatible: se esperaba {pt}, se obtuvo {at}.")
-
-                    curr = ret_t
+                        curr = UNKNOWN
                 else:
-                    
+                   
                     curr = UNKNOWN
 
-            elif cname == "IndexExprContext":
+            elif cname == "PropertyAccessExprContext":
                 
+                if (not isinstance(curr, Type)) or curr in (INT, BOOL, FLT, STR, NULL, UNKNOWN):
+                    self._err(child, "Acceso a propiedad sobre un valor no-objeto.")
+                    curr = UNKNOWN
+                    i += 1
+                    continue
+
+                cls_name = curr.name
+                prop_text = child.getText()
+                member = prop_text[1:] if prop_text.startswith(".") else prop_text
+                
+                              
+                if member == "constructor":
+                    next_is_call = (i + 1 < n) and (ctx.getChild(i+1).__class__.__name__ == "CallExprContext")
+                    if next_is_call:
+                        self._err(child, f"No se puede invocar 'constructor' como metodo de instancia; usa 'new {cls_name}(...)'.")
+                        curr = UNKNOWN
+                        i += 1  # saltar el CallExpr
+                    else:
+                        self._err(child, "No se puede usar 'constructor' como valor.")
+                        curr = UNKNOWN
+                    i += 1
+                    continue
+
+
+                
+                next_is_call = (i + 1 < n) and (ctx.getChild(i+1).__class__.__name__ == "CallExprContext")
+                if next_is_call:
+                    call_node = ctx.getChild(i+1)
+                    sig = self._find_method_sig(cls_name, member)
+                    if sig is None:
+                        self._err(child, f"Metodo '{member}' no existe en clase '{cls_name}'.")
+                        curr = UNKNOWN
+                    else:
+                        param_types, ret_t = sig
+                        arg_types = [ self.t(e) for e in self._extract_arg_exprs(call_node) ]
+                        if len(arg_types) != len(param_types):
+                            self._err(call_node, f"Llamada a metodo '{cls_name}.{member}' con {len(arg_types)} argumento(s), se esperaban {len(param_types)}.")
+                        else:
+                            for j, (pt, at) in enumerate(zip(param_types, arg_types), 1):
+                                if not self._is_assignable(pt, at):
+                                    self._err(call_node, f"Argumento {j} de metodo '{cls_name}.{member}' incompatible: {pt} vs {at}.")
+                        curr = ret_t
+                        i += 1 
+                else:
+                    
+                    ftype = self._lookup_field(cls_name, member)
+                    if ftype is not None:
+                        curr = ftype
+                    else:
+                        
+                        if self._find_method_sig(cls_name, member) is not None:
+                            self._err(child, f"No se puede usar el metodo '{cls_name}.{member}' como valor; invocalo con '()'.")
+                        else:
+                            self._err(child, f"Atributo '{member}' no existe en clase '{cls_name}'.")
+                        curr = UNKNOWN
+
+            elif cname == "IndexExprContext":
                 if isinstance(curr, ArrayType):
-                  
                     idx_expr = None
                     if hasattr(child, "expression"):
                         try:
@@ -411,7 +609,7 @@ class SemanticListener(CompiscriptListener):
                     self._err(child, "Indexacion sobre un valor no-arreglo.")
                     curr = UNKNOWN
 
-            elif cname == "PropertyAccessExprContext":
+            else:
                 
                 curr = UNKNOWN
 
@@ -420,29 +618,89 @@ class SemanticListener(CompiscriptListener):
         self.set_type(ctx, curr)
 
 
-    def _type_of_primary_atom(self, atom_ctx) -> TypeLike:
-        # primaryAtom:
-        #   Identifier                 # IdentifierExpr
-        # | 'new' Identifier '(' ...  # NewExpr
-        # | 'this'                    # ThisExpr
 
+    def _type_of_primary_atom(self, atom_ctx) -> TypeLike:
         if atom_ctx is None:
             return UNKNOWN
 
         cname = atom_ctx.__class__.__name__
-        if cname == "IdentifierExprContext":
-            # El tipo se guarda en el contexto 
-            return self.t(atom_ctx)
+
+        
+        if cname == "ThisExprContext":
+            if self.class_stack:
+                return Type(self.class_stack[-1])
+            else:
+                self._err(atom_ctx, "Uso de 'this' fuera de una clase.")
+                return UNKNOWN
+
+        
         if cname == "NewExprContext":
             tname = atom_ctx.getChild(1).getText()
+            arg_types = [ self.t(e) for e in self._extract_arg_exprs(atom_ctx) ]
+            sig = self._find_method_sig(tname, "constructor")
+            if sig is not None:
+                param_types, _ = sig
+                if len(arg_types) != len(param_types):
+                    self._err(atom_ctx, f"Constructor de '{tname}' espera {len(param_types)} argumento(s), se pasaron {len(arg_types)}.")
+                else:
+                    for i, (pt, at) in enumerate(zip(param_types, arg_types), 1):
+                        if not self._is_assignable(pt, at):
+                            self._err(atom_ctx, f"Argumento {i} del constructor de '{tname}' incompatible: {pt} vs {at}.")
+            else:
+                if len(arg_types) != 0:
+                    self._err(atom_ctx, f"La clase '{tname}' no define constructor que acepte {len(arg_types)} argumento(s).")
             return Type(tname)
-        #asda
-        if cname == "ThisExprContext":
-            return UNKNOWN
 
-        # Fallback: intenta con el primer hijo
+       
         first = atom_ctx.getChild(0)
+
+        
+        try:
+            if first.getText() == "(" and atom_ctx.getChildCount() >= 3:
+                return self.t(atom_ctx.getChild(1))
+        except Exception:
+            pass
+
+        
+        try:
+            name = first.getText()
+        except Exception:
+            name = ""
+
+        
+        if name and name.isidentifier() and name not in ("this", "new", "true", "false", "null"):
+            info = self.scopes.resolve(name)
+            if info is not None:
+                return info.type
+
+        
         return self.t(first)
+
+
+    def _extract_arg_exprs(self, node):
+     
+        args_node = None
+        
+        if hasattr(node, "arguments"):
+            try:
+                args_node = node.arguments()
+            except Exception:
+                args_node = None
+        if args_node is None:
+            for k in range(getattr(node, "getChildCount", lambda:0)()):
+                ch = node.getChild(k)
+                if ch.__class__.__name__ == "ArgumentsContext":
+                    args_node = ch
+                    break
+
+        exprs = []
+        if args_node:
+            e = args_node.expression()
+            if isinstance(e, list):
+                exprs = e
+            elif e is not None:
+                exprs = [e]
+        return exprs
 
 
     # --- Operadores binarios -----
@@ -583,7 +841,34 @@ class SemanticListener(CompiscriptListener):
     # ----------- Condiciones en estructuras ----------------
 
     def exitIfStatement(self, ctx):
+       
         self._check_boolean_cond(ctx.expression(), "if")
+
+        
+        blocks = ctx.block()
+        then_b = blocks[0] if isinstance(blocks, list) else blocks
+        else_b = blocks[1] if (isinstance(blocks, list) and len(blocks) > 1) else None
+
+        then_ret = self._ret(then_b)
+        else_ret = self._ret(else_b) if else_b else False
+
+        cconst = self._const_bool_expr(ctx.expression())
+
+        
+        if cconst is True:
+            stmt_returns = then_ret
+        elif cconst is False:
+            stmt_returns = else_ret
+        else:
+            stmt_returns = (then_ret and else_ret) if else_b else False
+
+       
+        self._set_returns(ctx, stmt_returns)
+
+        
+        if stmt_returns:
+            self._mark_terminator()
+
 
     
 
@@ -620,24 +905,55 @@ class SemanticListener(CompiscriptListener):
         params_nodes = ctx.parameters().parameter() if ctx.parameters() else []
         param_types = [(self._type_from_annotation(p.type_()) if p.type_() else UNKNOWN) for p in params_nodes]
         ret_t = self._type_from_annotation(ctx.type_()) if ctx.type_() else UNKNOWN
+
         
+        if fname == "constructor":
+            if ctx.type_():
+                pass
+            ret_t = VOID
+            if not self.class_stack:
+                self._err(ctx, "constructor fuera de una clase.")
+
         current_class = self.class_stack[-1] if self.class_stack else None
         key = (current_class, fname)
 
+        self.func_key_stack.append(key)
+        self.func_locals.setdefault(key, set())
+        self.func_captures.setdefault(key, set())
+        
         if key in self.funcs:
-           
             self._err(ctx, f"Funcion '{fname}' redeclarada.")
         else:
+            
+            if current_class is not None and fname != "constructor":
+                anc_sig = self._find_method_sig_in_ancestors(current_class, fname)
+                if anc_sig is not None:
+                    anc_params, anc_ret = anc_sig
+                    same_arity = (len(anc_params) == len(param_types))
+                    same_params = same_arity and all(type_equals(p, q) for p, q in zip(anc_params, param_types))
+                    same_ret = type_equals(anc_ret, ret_t)
+                    if not (same_arity and same_params and same_ret):
+                        self._err(
+                            ctx,
+                            f"Override incompatible de metodo '{current_class}.{fname}': "
+                            f"se esperaba {self._sig_to_str(anc_params, anc_ret)}, "
+                            f"se definio {self._sig_to_str(param_types, ret_t)}."
+                        )
+
+            
             self.funcs[key] = (param_types, ret_t)
-       
+
+      
         self.scopes.push()
         for p, ptype in zip(params_nodes, param_types):
             id_tok = p.Identifier().getSymbol()
             pname = id_tok.text
             ok = self.scopes.declare(pname, VarInfo(pname, ptype, False, id_tok))
+            self.func_locals[key].add(pname)
             if not ok:
                 self._err(p, f"Parametro '{pname}' redeclarado en la misma funcion.")
         self.func_ret_stack.append(ret_t)
+
                 
     def _is_global_func(self, name: str) -> bool:
         for (cls, fname) in self.funcs.keys():
@@ -645,12 +961,24 @@ class SemanticListener(CompiscriptListener):
                 return True
         return False
 
+    def exitTryCatchStatement(self, ctx):
         
+        blocks = ctx.block()
+        if not isinstance(blocks, list): blocks = [blocks]
+        try_b = blocks[0] if len(blocks) > 0 else None
+        catch_b = blocks[1] if len(blocks) > 1 else None
+        self._set_returns(ctx, self._ret(try_b) and self._ret(catch_b))
     
 
     def exitFunctionDeclaration(self, ctx):
+        expected = self.func_ret_stack[-1]
+        if expected != VOID and expected != UNKNOWN:
+            fun_block = ctx.block()
+            if not self._ret(fun_block):
+                self._err(ctx, f"La funcion '{ctx.Identifier().getText()}' "
+                            f"debe retornar {expected} en todos los caminos.")
+        self.func_key_stack.pop()
         self.scopes.pop()
-        
         self.func_ret_stack.pop()
 
     
@@ -679,9 +1007,10 @@ class SemanticListener(CompiscriptListener):
         else:
             if not has_expr:
                 self._err(ctx, f"La funcion debe retornar {expected}, pero no se retorno valor.")
-            elif not is_assignable(expected, expr_t):
+            elif not self._is_assignable(expected, expr_t):
                 self._err(ctx, f"Tipo de retorno incompatible: se esperaba {expected}, se obtuvo {expr_t}.")
         self._mark_terminator()
+        self._set_returns(ctx, True)
 
    
     def enterWhileStatement(self, ctx):
@@ -689,12 +1018,14 @@ class SemanticListener(CompiscriptListener):
     def exitWhileStatement(self, ctx):
         self._check_boolean_cond(ctx.expression(), "while")
         self.loop_depth -= 1
+        self._set_returns(ctx, False)
 
     def enterDoWhileStatement(self, ctx):
         self.loop_depth += 1
     def exitDoWhileStatement(self, ctx):
         self._check_boolean_cond(ctx.expression(), "do-while")
         self.loop_depth -= 1
+        self._set_returns(ctx, False)
 
     def enterForStatement(self, ctx):
         self.loop_depth += 1
@@ -707,56 +1038,242 @@ class SemanticListener(CompiscriptListener):
             if not is_boolean(cond_t):
                 self._err(exprs[0], "La condicion del for debe ser boolean.")
         self.loop_depth -= 1
+        self._set_returns(ctx, False)
 
     def enterForeachStatement(self, ctx):
         self.loop_depth += 1
 
     def exitForeachStatement(self, ctx):
         self.loop_depth -= 1
+        self._set_returns(ctx, False)
     
     def exitBreakStatement(self, ctx):
         if self.loop_depth == 0 and self.switch_depth == 0:
             self._err(ctx, "'break' solo puede usarse dentro de un bucle o switch.")
         self._mark_terminator()
+        self._set_returns(ctx, False)
 
     def exitContinueStatement(self, ctx):
         if self.loop_depth == 0:
             self._err(ctx, "'continue' solo puede usarse dentro de un bucle.")
         self._mark_terminator()
+        self._set_returns(ctx, False)
     
     def enterSwitchStatement(self, ctx):
         self.switch_depth += 1
+        sw_expr = ctx.expression() if callable(ctx.expression) else None
+        if isinstance(sw_expr, list):
+            sw_expr = sw_expr[0] if sw_expr else None
+        self._switch_expr_nodes.append(sw_expr)
+        self._switch_types.append(UNKNOWN)
 
     def exitSwitchStatement(self, ctx):
         
-        sw_expr = getattr(ctx, "expression", None)
-        if callable(sw_expr):
-            sw_expr = ctx.expression()
-        sw_t = self.t(sw_expr) if sw_expr is not None else UNKNOWN
+        sw_t = self._switch_types[-1] if self._switch_types else UNKNOWN
+        if sw_t == UNKNOWN:
+            sw_node = self._switch_expr_nodes[-1] if self._switch_expr_nodes else None
+            if sw_node is not None:
+                sw_t = self.t(sw_node)
+                if sw_t == UNKNOWN:
+                    txt = getattr(sw_node, "getText", lambda: "")()
+                    if txt and txt.isidentifier():
+                        info = self.scopes.resolve(txt)
+                        if info is not None:
+                            sw_t = info.type
+                    elif txt.isdigit():
+                        sw_t = INT
+                    elif len(txt) > 0 and txt[0] == '"':
+                        sw_t = STR
 
-        # ver cada case
-        cases = []
-        if hasattr(ctx, "caseClause"):
-            try:
-                cases = ctx.caseClause()
-            except Exception:
-                cases = []
-        for cc in (cases or []):
-            ce = getattr(cc, "expression", None)
-            if callable(ce):
-                ce = cc.expression()
-            ct = self.t(ce) if ce is not None else UNKNOWN
-            if not are_eq_comparable(sw_t, ct):
-                self._err(ce or cc, f"Tipo de 'case' incompatible con 'switch' ({sw_t} vs {ct}).")
-
+        
         self.switch_depth -= 1
+        if self._switch_expr_nodes:
+            self._switch_expr_nodes.pop()
+        if self._switch_types:
+            self._switch_types.pop()
+        self._set_returns(ctx, False)
+
+
         
     def enterStatement(self, ctx):
         self._check_unreachable(ctx)
 
     def enterClassDeclaration(self, ctx):
         cname = ctx.Identifier(0).getText()
+
+        base = None
+        ids = ctx.Identifier()
+        if isinstance(ids, list) and len(ids) >= 2:
+            base = ids[1].getText()
+
         self.class_stack.append(cname)
+        
+        self.class_extends[cname] = base
+
 
     def exitClassDeclaration(self, ctx):
         self.class_stack.pop()
+        
+    def _lookup_field(self, cls_name: str, member: str) -> Optional[TypeLike]:
+        cur = cls_name
+        while cur is not None:
+            fields = self.class_fields.get(cur, {})
+            if member in fields:
+                return fields[member]
+            cur = self.class_extends.get(cur)
+        return None
+
+    def _find_method_sig(self, cls_name: str, method: str) -> Optional[tuple[list[TypeLike], TypeLike]]:
+        cur = cls_name
+        while cur is not None:
+            key = (cur, method)
+            if key in self.funcs:
+                return self.funcs[key]
+            cur = self.class_extends.get(cur)
+        return None
+
+    def _set_returns(self, node, val: bool):
+        self.returns[node] = bool(val)
+    
+    def _ret(self, node) -> bool:
+        return bool(self.returns.get(node, False))
+    
+    def exitStatement(self, ctx):
+        
+        child = None
+        
+        for getter in (
+            "returnStatement", "ifStatement", "block",
+            "tryCatchStatement", "whileStatement",
+            "doWhileStatement", "forStatement",
+            "switchStatement", "expressionStatement",
+            "assignment", "variableDeclaration",
+            "constantDeclaration", "printStatement",
+            "breakStatement", "continueStatement",
+            "functionDeclaration", "classDeclaration",
+            "foreachStatement",
+        ):
+            if hasattr(ctx, getter) and getattr(ctx, getter)():
+                child = getattr(ctx, getter)()
+                break
+        self._set_returns(ctx, self._ret(child))
+        
+    
+    def _check_property_assignment(self, ctx, obj_t: TypeLike, member: str, rhs_t: TypeLike):
+        
+        if (not isinstance(obj_t, Type)) or obj_t in (INT, BOOL, FLT, STR, NULL, UNKNOWN) or isinstance(obj_t, ArrayType):
+            self._err(ctx, "Asignacion a propiedad sobre un valor no-objeto.")
+            return
+        cls = obj_t.name
+
+        
+        ftype = self._lookup_field(cls, member)
+        if ftype is not None:
+            if not self._is_assignable(ftype, rhs_t):
+                self._err(ctx, f"Tipo incompatible en asignacion a '{cls}.{member}': se esperaba {ftype}, se obtuvo {rhs_t}.")
+            return
+
+       
+        if self._find_method_sig(cls, member) is not None:
+            self._err(ctx, f"No se puede asignar al metodo '{cls}.{member}'.")
+            return
+
+        
+        self._err(ctx, f"Atributo '{member}' no existe en clase '{cls}'.")
+
+    def exitPropertyAssignExpr(self, ctx):
+        obj_t = self.t(ctx.lhs)
+        member = ctx.Identifier().getText()
+        rhs_t = self.t(ctx.assignmentExpr())
+        self._check_property_assignment(ctx, obj_t, member, rhs_t)
+       
+        self.set_type(ctx, rhs_t)
+        
+    # -- Helpers de tipado subtipado ---  
+        
+    def _is_assignable(self, expected: TypeLike, got: TypeLike) -> bool:
+      
+        if is_assignable(expected, got):
+            return True
+        # subtipado derivada -> base
+        if isinstance(expected, Type) and isinstance(got, Type):
+            cur = got.name
+            while cur is not None:
+                if cur == expected.name:
+                    return True
+                cur = self.class_extends.get(cur)
+        return False
+
+    def _find_method_sig_in_ancestors(self, cls_name: str, method: str) -> Optional[tuple[list[TypeLike], TypeLike]]:
+        base = self.class_extends.get(cls_name)
+        while base is not None:
+            sig = self.funcs.get((base, method))
+            if sig is not None:
+                return sig
+            base = self.class_extends.get(base)
+        return None
+
+    def _sig_to_str(self, params: list[TypeLike], ret: TypeLike) -> str:
+        ps = ", ".join(str(p) for p in params)
+        return f"({ps}) -> {ret}"
+    
+    
+    def exitSwitchCase(self, ctx):
+       
+        if not self._switch_expr_nodes:
+            return
+
+        
+        sw_t = self._switch_types[-1] if self._switch_types else UNKNOWN
+        if sw_t == UNKNOWN:
+            sw_node = self._switch_expr_nodes[-1]
+            tmp = self.t(sw_node) if sw_node is not None else UNKNOWN
+            if tmp != UNKNOWN:
+                sw_t = tmp
+            else:
+                try:
+                    txt = sw_node.getText() if sw_node is not None else ""
+                    info = self.scopes.resolve(txt) if txt.isidentifier() else None
+                    if info is not None:
+                        sw_t = info.type
+                    elif txt.isdigit():
+                        sw_t = INT
+                    elif len(txt) > 0 and txt[0] == '"':
+                        sw_t = STR
+                except Exception:
+                    pass
+
+        
+        ce = ctx.expression() if callable(getattr(ctx, "expression", None)) else None
+        if isinstance(ce, list):
+            ce = ce[0] if ce else None
+        ct = self.t(ce) if ce is not None else UNKNOWN
+
+        
+        if ct == UNKNOWN:
+            try:
+                lit = ctx.getChild(1).getText() 
+                if lit and len(lit) > 0 and lit[0] == '"':
+                    ct = STR
+                elif lit.isdigit():
+                    ct = INT
+            except Exception:
+                pass
+
+        if not are_eq_comparable(sw_t, ct):
+            self._err(ce or ctx, f"Tipo de 'case' incompatible con 'switch' ({sw_t} vs {ct})")
+
+    def _maybe_mark_capture(self, name: str):
+        
+        if not self.func_key_stack:
+            return
+        cur_key = self.func_key_stack[-1]
+        
+        if name in self.func_locals.get(cur_key, set()):
+            return
+        
+        for outer_key in reversed(self.func_key_stack[:-1]):
+            if name in self.func_locals.get(outer_key, set()):
+                self.func_captures.setdefault(cur_key, set()).add(name)
+                return
+      
