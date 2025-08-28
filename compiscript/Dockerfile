@@ -29,52 +29,36 @@ FROM ubuntu:latest
 # RUN update-ca-certificates
 
 # Install packages
+FROM ubuntu:latest
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Paquetes base + Java + Python con venv
 RUN apt-get update && apt-get install -y \
-    curl \
-    bash-completion \
-    openjdk-17-jdk \
-    fontconfig \
-    fonts-dejavu-core \
-    software-properties-common \
+    curl bash-completion openjdk-17-jdk fontconfig fonts-dejavu-core software-properties-common \
+    graphviz \
+    python3 python3-venv python3-pip ca-certificates git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt-get update && apt-get install -y \
-    python3-pip
-
-# Install ANTLR
-# We are using a version we downloaded from https://www.antlr.org/download/antlr-4.13.1-complete.jar
+# ANTLR
 COPY antlr-4.13.1-complete.jar /usr/local/lib/antlr-4.13.1-complete.jar
-
 COPY ./commands/antlr /usr/local/bin/antlr
-RUN chmod +x /usr/local/bin/antlr
-COPY ./commands/antlr /usr/bin/antlr
-RUN chmod +x /usr/bin/antlr
-
+RUN chmod +x /usr/local/bin/antlr && ln -s /usr/local/bin/antlr /usr/bin/antlr
 COPY ./commands/grun /usr/local/bin/grun
-RUN chmod +x /usr/local/bin/grun
-COPY ./commands/grun /usr/bin/grun
-RUN chmod +x /usr/bin/grun
+RUN chmod +x /usr/local/bin/grun && ln -s /usr/local/bin/grun /usr/bin/grun
 
-# Python virtual env
-COPY python-venv.sh .
-RUN chmod +x ./python-venv.sh
-RUN ./python-venv.sh
+# Virtualenv en /opt/venv y usarlo por defecto
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN python -m pip install -U pip setuptools wheel
 
+# Dependencias de Python
 COPY requirements.txt .
-# Not production-intended, never do this, this is just a simple example
-RUN pip install -r requirements.txt --break-system-packages 
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Set user
+# Usuario sin privilegios
 ARG USER=appuser
 ARG UID=1001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "$(pwd)" \
-    --no-create-home \
-    --uid "${UID}" \
-    "${USER}"
+RUN adduser --disabled-password --gecos "" --home "/home/${USER}" --uid "${UID}" "${USER}"
 USER ${UID}
 
 WORKDIR /program

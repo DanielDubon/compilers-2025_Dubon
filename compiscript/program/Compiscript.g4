@@ -34,7 +34,7 @@ variableDeclaration
   ;
 
 constantDeclaration
-  : 'const' Identifier typeAnnotation? '=' expression ';'
+  : 'const' Identifier typeAnnotation? initializer? ';'
   ;
 
 typeAnnotation: ':' type;

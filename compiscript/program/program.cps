@@ -104,5 +104,32 @@ function factorial(n: integer): integer {
   return n * factorial(n - 1);
 }
 
+
+// Aritmética
+let a: integer = 2 + 3 * 4;
+let b = 10 - a / 2;
+
+// Lógicas
+let c: boolean = true && (false || !false);
+
+// Comparaciones
+let d: boolean = a == 8;
+let e: boolean = a < b;
+
+// Asignación (inferencia y chequeo)
+let x;        // desconocido
+x = 5;        // infiere integer
+x = "hola";   // ERROR: tipo incompatible
+
+const K: integer = 7;
+// K = 8;     // ERROR: const no reasignable
+
+// Arreglos
+let v: integer[] = [1, 2, 3];
+let y = v[0];               // ok
+let z: integer[] = [];      // [] -> array<unknown>, pero lo permitimos asignar a integer[]? -> NO, marcara incompatible
+let s: string = "num: " + a; // concatenacion string+integer OK
+
+
 // Program end
 print("Program finished.");
