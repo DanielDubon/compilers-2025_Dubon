@@ -1,4 +1,5 @@
 from antlr4 import ParserRuleContext, ParseTreeWalker
+from symbol_table import SymbolTable, FunctionInfo, ClassInfo
 from CompiscriptListener import CompiscriptListener
 from symbols import (
     ScopeStack, VarInfo,
@@ -16,6 +17,7 @@ class SemanticListener(CompiscriptListener):
    
 
     def __init__(self, source_lines):
+        self.symbtab = SymbolTable()
         self.scopes = ScopeStack()
         self.errors = []
         self.source_lines = source_lines
@@ -34,9 +36,6 @@ class SemanticListener(CompiscriptListener):
         self.func_key_stack: list[tuple[Optional[str], str]] = []
         self.func_locals: Dict[tuple[Optional[str], str], set[str]] = {}
         self.func_captures: Dict[tuple[Optional[str], str], set[str]] = {}
-
-
-
 
 
 
@@ -223,6 +222,8 @@ class SemanticListener(CompiscriptListener):
             if self.func_key_stack:
                 self.func_locals[self.func_key_stack[-1]].add(name)
         self._set_returns(ctx, False)
+        if ok and not self.class_stack:  # solo si no es campo de clase
+            self.symbtab.declare_var(name, VarInfo(name, typ, True, id_tok))
 
     def exitPrintStatement(self, ctx):
         
@@ -286,6 +287,8 @@ class SemanticListener(CompiscriptListener):
         self._set_returns(ctx, False)
         if ok and self.func_key_stack:
             self.func_locals[self.func_key_stack[-1]].add(name)
+        if ok and not self.class_stack:
+            self.symbtab.declare_var(name, VarInfo(name, var_t, False, id_tok))
 
     # ---------- Asignaciones ----------------
 
@@ -939,8 +942,17 @@ class SemanticListener(CompiscriptListener):
 
             
             self.funcs[key] = (param_types, ret_t)
+            params_infos = []
+            for p, ptype in zip(params_nodes, param_types):
+                id_tok = p.Identifier().getSymbol()
+                pname = id_tok.text
+                params_infos.append(VarInfo(pname, ptype, False, id_tok))
 
-      
+            f_info = FunctionInfo(fname, params_infos, ret_t,
+                                  is_method=(self.class_stack != []),
+                                  is_constructor=(fname == "constructor"))
+            self.symbtab.declare_func(f_info)
+
         self.scopes.push()
         for p, ptype in zip(params_nodes, param_types):
             id_tok = p.Identifier().getSymbol()
@@ -950,6 +962,7 @@ class SemanticListener(CompiscriptListener):
             if not ok:
                 self._err(p, f"Parametro '{pname}' redeclarado en la misma funcion.")
         self.func_ret_stack.append(ret_t)
+
 
                 
     def _is_global_func(self, name: str) -> bool:
@@ -1110,6 +1123,24 @@ class SemanticListener(CompiscriptListener):
 
     def exitClassDeclaration(self, ctx):
         self.class_stack.pop()
+        cname = ctx.Identifier(0).getText()
+        base = self.class_extends.get(cname)
+
+        fields = {n: VarInfo(n, t, False, None)
+                  for n, t in self.class_fields.get(cname, {}).items()}
+
+        methods = {}
+        for (cls, fname), (param_types, ret_t) in self.funcs.items():
+            if cls == cname:
+                params_infos = [VarInfo(f"p{i}", pt, False, None)
+                                for i, pt in enumerate(param_types)]
+                methods[fname] = FunctionInfo(fname, params_infos, ret_t,
+                                              is_method=True,
+                                              is_constructor=(fname=="constructor"))
+
+        c_info = ClassInfo(cname, base, fields, methods)
+        self.symbtab.declare_class(c_info)
+
         
     def _lookup_field(self, cls_name: str, member: str) -> Optional[TypeLike]:
         cur = cls_name

@@ -128,6 +128,8 @@ def main(argv):
         print(f"{len(sem.errors)} error(es) semantico(s) encontrados.")
     else:
         print("Chequeos semanticos OK.")
+        if hasattr(sem, "symbtab"):
+            print(sem.symbtab.dump())
 
    
     builder = AstBuilder()
