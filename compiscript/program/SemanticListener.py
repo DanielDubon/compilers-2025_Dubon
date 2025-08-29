@@ -358,23 +358,20 @@ class SemanticListener(CompiscriptListener):
 
     def exitAssignExpr(self, ctx):
         rhs_t = self.t(ctx.assignmentExpr())
-
         lhs = ctx.leftHandSide()
         lhs_text = lhs.getText() if hasattr(lhs, "getText") else ""
-
-        
         if lhs_text and lhs_text.isidentifier():
             name = lhs_text
             self._maybe_mark_capture(name)
             self._assign_to_name(ctx, name, rhs_t)
             self.set_type(ctx, rhs_t)
             return
-
-        
         lhs_t = self.t(lhs)
-        if not self._is_assignable(lhs_t, rhs_t):
+        elem_expected = self._lhs_expected_array_elem(lhs)
+        if elem_expected is not None and not self._is_assignable(elem_expected, rhs_t):
+            self._err(ctx, f"Tipo incompatible en asignacion a elemento de arreglo: se esperaba {elem_expected}, se obtuvo {rhs_t}.")
+        elif not self._is_assignable(lhs_t, rhs_t):
             self._err(ctx, f"Tipo incompatible en asignacion: se esperaba {lhs_t}, se obtuvo {rhs_t}.")
-       
         self.set_type(ctx, rhs_t)
 
 
@@ -1277,3 +1274,29 @@ class SemanticListener(CompiscriptListener):
                 self.func_captures.setdefault(cur_key, set()).add(name)
                 return
       
+    def _lhs_expected_array_elem(self, lhs_ctx):
+        curr = self._type_of_primary_atom(lhs_ctx.primaryAtom())
+        i = 1
+        while i < lhs_ctx.getChildCount():
+            ch = lhs_ctx.getChild(i)
+            nm = ch.__class__.__name__
+            if nm == "PropertyAccessExprContext":
+                member = ch.getText()[1:]
+                if isinstance(curr, Type):
+                    ftype = self._lookup_field(curr.name, member)
+                    if ftype is not None:
+                        curr = ftype
+                    else:
+                        sig = self._find_method_sig(curr.name, member)
+                        curr = sig[1] if sig else UNKNOWN
+                else:
+                    curr = UNKNOWN
+            elif nm == "IndexExprContext":
+                if isinstance(curr, ArrayType):
+                    return curr.elem
+                else:
+                    return None
+            elif nm == "CallExprContext":
+                curr = UNKNOWN
+            i += 1
+        return None
