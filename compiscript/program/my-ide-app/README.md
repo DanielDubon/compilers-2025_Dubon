@@ -1,12 +1,15 @@
-# IDE App
-The implemented IDE App is a simple Integrated Development Environment (IDE) built with React and TypeScript. It allows users to write, compile, and manage their code efficiently. The application features a code editor, compilation output display, and a toolbar for various actions.
+
+# Compiscript IDE App
+This is a modern Integrated Development Environment (IDE) for Compiscript, built with React and TypeScript. It allows users to write, compile, and manage Compiscript code efficiently. The application features a Sublime Text-style code editor with syntax highlighting, compilation output display, and a toolbar for actions.
+
 
 ## Features
 
-- **Code Editor**: A text area for users to write their code with syntax highlighting.
-- **Compilation Output**: Displays the results of the compilation process, including errors and output.
-- **Toolbar**: Contains buttons for compiling code, saving files, and other functionalities.
-- **File Management**: Utility functions for saving and loading code files from the local filesystem.
+- **Sublime Text-style Code Editor**: Write code with line numbers and syntax highlighting for keywords, numbers, strings, booleans (orange), and comments (verde).
+- **Compilation Output**: Displays the results of the compilation process, including errors and output, with colorized error messages.
+- **Toolbar**: Contains a button for compiling code.
+- **Backend Integration**: Communicates with a Python/Flask backend that runs the Compiscript compiler and returns output/errors.
+
 
 ## Project Structure
 
@@ -30,6 +33,7 @@ my-ide-app
 └── README.md
 ```
 
+
 ## Installation
 
 1. Clone the repository:
@@ -45,10 +49,28 @@ my-ide-app
    npm install
    ```
 
+
 ## Usage
 
 To start the application, run:
 ```
 npm start
 ```
-This will launch the IDE in your default web browser.
+This will launch the IDE in your default web browser at http://localhost:3000.
+
+Make sure the backend server (Flask, `server.py`) is running in the `compiscript/program` directory:
+```
+python3 server.py
+```
+
+## Syntax Highlighting Example
+
+```js
+let a = true; // boolean resaltado en naranja
+let b = 123;  // número resaltado
+let s = "texto"; // string resaltado
+// comentario en verde
+if (a) {
+   print(b);
+}
+```

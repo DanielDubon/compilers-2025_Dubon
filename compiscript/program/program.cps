@@ -346,6 +346,9 @@ function deadasd(): integer {
 
 
 
+let g = 5;
+let h = "hola";
+let k = g + h; // Error: suma de entero y string
 
 
 

@@ -6,7 +6,7 @@ import { compileCode } from './services/compilerService';
 
 const App: React.FC = () => {
   const [code, setCode] = useState<string>(
-    `let x = 10;\nlet y = 20;\nlet z = x + y;\nprint(z);`
+    `let x = 10;\nlet y = 20;\nlet z = x + y;`
   );
   const [output, setOutput] = useState<string>('');
   const [errors, setErrors] = useState<string>('');
@@ -24,7 +24,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: 800, margin: '0 auto' }}>
+    <div style={{
+      padding: '20px',
+      maxWidth: 800,
+      margin: '0 auto',
+      background: '#282a36', // fondo sublime
+      minHeight: '100vh',
+      fontFamily: "'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
+    }}>
       <h2>Compiscript IDE</h2>
       <Toolbar onCompile={handleCompile} />
       <Editor code={code} onChange={setCode} />

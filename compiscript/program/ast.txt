@@ -1,54 +1,29 @@
 Program
   .decls:
-    FunctionDecl
-      name=suma
-      .params:
-        Param
-          name=a
-          .type:
-            SimpleType
-              name=integer
-        Param
-          name=b
-          .type:
-            SimpleType
-              name=integer
-      .ret:
-        SimpleType
-          name=integer
-      .body:
-        Block
-          .stmts:
-            Return
-              .expr:
-                Binary
-                  op=+
-                  .left:
-                    Name
-                      name=a
-                  .right:
-                    Name
-                      name=b
-      is_method=False
-      is_constructor=False
     VarDecl
-      name=resultado
-      type=None
-      .init:
-        Call
-          .callee:
-            Name
-              name=suma
-          .args:
-            LiteralInt
-              value=5
-            LiteralInt
-              value=7
-      kind=let
-    VarDecl
-      name=i
+      name=x
       type=None
       .init:
         LiteralInt
-          value=0
+          value=10
+      kind=let
+    VarDecl
+      name=y
+      type=None
+      .init:
+        LiteralInt
+          value=20
+      kind=let
+    VarDecl
+      name=z
+      type=None
+      .init:
+        Binary
+          op=+
+          .left:
+            Name
+              name=x
+          .right:
+            Name
+              name=y
       kind=let

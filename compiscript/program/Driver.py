@@ -123,19 +123,18 @@ def main(argv):
     sem = SemanticListener(source_lines)
     walker.walk(sem, tree)
 
-    
     if sem.errors:
         print(f"{len(sem.errors)} error(es) semantico(s) encontrados.")
+        print("Analisis completado.")
+        return
     else:
         print("Chequeos semanticos OK.")
         if hasattr(sem, "symbtab"):
             print(sem.symbtab.dump())
 
-   
     builder = AstBuilder()
     ast = builder.visit(tree)
 
-    
     if want_ast_dump or (not want_ast_dot and not want_ast_dump):
         txt = dump_ast_to_str(ast)
         with open("ast.txt", "w", encoding="utf-8") as f:
@@ -146,7 +145,6 @@ def main(argv):
         with open("ast.dot", "w", encoding="utf-8") as f:
             f.write(astdot)
 
-   
     print("Analisis completado.")
     print("Parse tree: parse_tree.txt, parse_tree.dot  (usa: dot -Tpng parse_tree.dot -o parse_tree.png)")
     print("AST:        ast.txt, ast.dot                (usa: dot -Tpng ast.dot -o ast.png)")

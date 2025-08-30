@@ -6,7 +6,15 @@ interface CompilerOutputProps {
 }
 
 const CompilerOutput: React.FC<CompilerOutputProps> = ({ output, errors }) => (
-  <div style={{ marginTop: '20px', background: '#fff', padding: '10px', borderRadius: '4px', minHeight: '60px' }}>
+  <div style={{
+    marginTop: '20px',
+    background: '#232629',
+    padding: '10px',
+    borderRadius: '4px',
+    minHeight: '60px',
+    color: '#f8f8f2',
+    border: '1px solid #444'
+  }}>
     <h3>Salida del compilador:</h3>
     {output && <pre>{output}</pre>}
     {errors && (
