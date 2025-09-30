@@ -1,4 +1,5 @@
 import sys
+import os
 from antlr4 import *
 from CompiscriptLexer import CompiscriptLexer
 from CompiscriptParser import CompiscriptParser
@@ -7,6 +8,7 @@ from treeutils import tree_to_pretty_text, tree_to_dot
 from SemanticListener import SemanticListener
 from antlr4 import ParseTreeWalker
 from ast_builder import AstBuilder
+from tac_generator import TACGenerator
 from dataclasses import is_dataclass, fields
 
 def dump_ast_to_str(node, indent=0):
@@ -81,12 +83,14 @@ def ast_to_dot(root):
 
 
 def main(argv):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     if len(argv) < 2:
-        print("Uso: python3 Driver.py <archivo.cps> [--ast-dump] [--ast-dot]")
+        print("Uso: python3 Driver.py <archivo.cps> [--ast-dump] [--ast-dot] [--tac]")
         return
 
     want_ast_dump = ("--ast-dump" in argv)
     want_ast_dot  = ("--ast-dot" in argv)
+    want_tac = ("--tac" in argv)
 
     with open(argv[1], encoding="utf-8") as f:
         source_lines = f.readlines()
@@ -111,11 +115,11 @@ def main(argv):
 
     
     pretty = tree_to_pretty_text(tree, parser.ruleNames)
-    with open("parse_tree.txt", "w", encoding="utf-8") as f:
+    with open(os.path.join(script_dir, "parse_tree.txt"), "w", encoding="utf-8") as f:
         f.write(pretty)
 
     dot = tree_to_dot(tree, parser)
-    with open("parse_tree.dot", "w", encoding="utf-8") as f:
+    with open(os.path.join(script_dir, "parse_tree.dot"), "w", encoding="utf-8") as f:
         f.write(dot)
 
     
@@ -137,17 +141,26 @@ def main(argv):
 
     if want_ast_dump or (not want_ast_dot and not want_ast_dump):
         txt = dump_ast_to_str(ast)
-        with open("ast.txt", "w", encoding="utf-8") as f:
+        with open(os.path.join(script_dir, "ast.txt"), "w", encoding="utf-8") as f:
             f.write(txt)
 
     if want_ast_dot or (not want_ast_dot and not want_ast_dump):
         astdot = ast_to_dot(ast)
-        with open("ast.dot", "w", encoding="utf-8") as f:
+        with open(os.path.join(script_dir, "ast.dot"), "w", encoding="utf-8") as f:
             f.write(astdot)
 
+    if want_tac:
+        print("Generando codigo intermedio (TAC)...")
+        tac_gen = TACGenerator(sem.symbtab)
+        tac_code = tac_gen.generate(ast)
+        tac_path = os.path.join(script_dir, "tac.txt")
+        with open(tac_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(map(str, tac_code)))
+        print(f"TAC guardado en: {tac_path}")
+
     print("Analisis completado.")
-    print("Parse tree: parse_tree.txt, parse_tree.dot  (usa: dot -Tpng parse_tree.dot -o parse_tree.png)")
-    print("AST:        ast.txt, ast.dot                (usa: dot -Tpng ast.dot -o ast.png)")
+    print(f"Parse tree: {os.path.join(script_dir, 'parse_tree.txt')}, {os.path.join(script_dir, 'parse_tree.dot')}  (usa: dot -Tpng {os.path.join(script_dir, 'parse_tree.dot')} -o {os.path.join(script_dir, 'parse_tree.png')})")
+    print(f"AST:        {os.path.join(script_dir, 'ast.txt')}, {os.path.join(script_dir, 'ast.dot')}                (usa: dot -Tpng {os.path.join(script_dir, 'ast.dot')} -o {os.path.join(script_dir, 'ast.png')})")
 
 if __name__ == "__main__":
     main(sys.argv)

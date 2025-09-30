@@ -1,0 +1,192 @@
+PI = 314
+greeting = "Hello, Compiscript!"
+numbers = None
+matrix = None
+makeAdder:
+BeginFunc
+t0 = x + 1
+EndFunc
+param 5
+t1 = call makeAdder, 1
+addFive = t1
+constructor:
+BeginFunc
+name = name
+EndFunc
+speak:
+BeginFunc
+t2 = None + " makes a sound."
+EndFunc
+speak:
+BeginFunc
+t3 = None + " barks."
+EndFunc
+dog = None
+first = None
+getMultiples:
+BeginFunc
+t4 = n * 1
+t5 = n * 2
+t6 = n * 3
+t7 = n * 4
+t8 = n * 5
+result = None
+EndFunc
+param 2
+t9 = call getMultiples, 1
+multiples = t9
+factorial:
+BeginFunc
+if_false 1 goto L0
+L0:
+t10 = n - 1
+param t10
+t11 = call factorial, 1
+t12 = n * t11
+EndFunc
+t13 = 3 * 4
+t14 = 2 + t13
+a = t14
+t15 = a / 2
+t16 = 10 - t15
+bnum = t16
+t17 = True && None
+c = t17
+d = 8
+e = bnum
+K = 7
+v = None
+y = None
+t18 = "num: " + a
+s = t18
+f:
+BeginFunc
+EndFunc
+constructor:
+BeginFunc
+name = name
+EndFunc
+speak:
+BeginFunc
+t19 = None + " habla"
+EndFunc
+shout:
+BeginFunc
+t20 = None + "!!!"
+EndFunc
+b = None
+constructor:
+BeginFunc
+EndFunc
+constructor:
+BeginFunc
+EndFunc
+constructor:
+BeginFunc
+ok = 1
+EndFunc
+b4 = None
+constructor:
+BeginFunc
+EndFunc
+b5 = None
+constructor:
+BeginFunc
+EndFunc
+ping:
+BeginFunc
+EndFunc
+b6 = None
+constructor:
+BeginFunc
+EndFunc
+dup:
+BeginFunc
+t21 = n + n
+EndFunc
+b7 = None
+t22 = 1 + 2
+notObj = t22
+arr = None
+notArr = 123
+calcularDescuento:
+BeginFunc
+if_false 100 goto L1
+L1:
+EndFunc
+subtotalCompra = 150
+param subtotalCompra
+t23 = call calcularDescuento, 1
+descuentoAplicado = t23
+constructor:
+BeginFunc
+cliente = cliente
+monto = monto
+EndFunc
+resumen:
+BeginFunc
+t24 = "Cliente " + None
+t25 = t24 + ", monto "
+t26 = t25 + None
+EndFunc
+fac = None
+empleados = None
+constructor:
+BeginFunc
+marca = marca
+EndFunc
+etiqueta:
+BeginFunc
+t27 = "Vehiculo " + None
+EndFunc
+rodar:
+BeginFunc
+t28 = None + " en marcha"
+EndFunc
+m = None
+umbral = 50
+estado = None
+test = 2
+gv = 10
+G = 1
+outer:
+BeginFunc
+x = 1
+c = 5
+inner1:
+BeginFunc
+t29 = gv + 1
+gv = t29
+EndFunc
+inner2:
+BeginFunc
+t30 = x + 1
+x = t30
+EndFunc
+inner3:
+BeginFunc
+x = 0
+EndFunc
+param 10
+t31 = call inner1, 1
+t32 = call inner2, 0
+t33 = call inner3, 0
+EndFunc
+level1:
+BeginFunc
+a = 1
+level2:
+BeginFunc
+b = 2
+level3:
+BeginFunc
+EndFunc
+t34 = call level3, 0
+EndFunc
+t35 = call level2, 0
+EndFunc
+deadasd:
+BeginFunc
+if_false True goto L2
+L2:
+EndFunc

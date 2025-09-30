@@ -102,6 +102,7 @@ class VarInfo:
     type: TypeLike
     is_const: bool
     token: object
+    offset: Optional[int] = None
 
 class ScopeStack:
     def __init__(self) -> None:
