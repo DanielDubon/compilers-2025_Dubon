@@ -53,35 +53,35 @@ def serializedATN():
         2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,
         48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,
         0,7,1,0,3,4,1,0,34,35,1,0,36,39,1,0,40,41,1,0,42,44,2,0,41,41,45,
-        45,2,0,53,55,59,59,501,0,95,1,0,0,0,2,118,1,0,0,0,4,120,1,0,0,0,
-        6,129,1,0,0,0,8,139,1,0,0,0,10,149,1,0,0,0,12,152,1,0,0,0,14,167,
-        1,0,0,0,16,169,1,0,0,0,18,172,1,0,0,0,20,178,1,0,0,0,22,187,1,0,
-        0,0,24,193,1,0,0,0,26,201,1,0,0,0,28,218,1,0,0,0,30,226,1,0,0,0,
-        32,229,1,0,0,0,34,232,1,0,0,0,36,238,1,0,0,0,38,246,1,0,0,0,40,262,
-        1,0,0,0,42,271,1,0,0,0,44,279,1,0,0,0,46,292,1,0,0,0,48,300,1,0,
-        0,0,50,305,1,0,0,0,52,323,1,0,0,0,54,325,1,0,0,0,56,338,1,0,0,0,
-        58,340,1,0,0,0,60,348,1,0,0,0,62,356,1,0,0,0,64,364,1,0,0,0,66,372,
-        1,0,0,0,68,380,1,0,0,0,70,388,1,0,0,0,72,399,1,0,0,0,74,407,1,0,
-        0,0,76,414,1,0,0,0,78,416,1,0,0,0,80,432,1,0,0,0,82,445,1,0,0,0,
-        84,447,1,0,0,0,86,455,1,0,0,0,88,468,1,0,0,0,90,476,1,0,0,0,92,94,
-        3,2,1,0,93,92,1,0,0,0,94,97,1,0,0,0,95,93,1,0,0,0,95,96,1,0,0,0,
-        96,98,1,0,0,0,97,95,1,0,0,0,98,99,5,0,0,1,99,1,1,0,0,0,100,119,3,
-        6,3,0,101,119,3,8,4,0,102,119,3,14,7,0,103,119,3,44,22,0,104,119,
-        3,50,25,0,105,119,3,16,8,0,106,119,3,18,9,0,107,119,3,4,2,0,108,
-        119,3,20,10,0,109,119,3,22,11,0,110,119,3,24,12,0,111,119,3,26,13,
-        0,112,119,3,28,14,0,113,119,3,36,18,0,114,119,3,38,19,0,115,119,
-        3,30,15,0,116,119,3,32,16,0,117,119,3,34,17,0,118,100,1,0,0,0,118,
-        101,1,0,0,0,118,102,1,0,0,0,118,103,1,0,0,0,118,104,1,0,0,0,118,
-        105,1,0,0,0,118,106,1,0,0,0,118,107,1,0,0,0,118,108,1,0,0,0,118,
-        109,1,0,0,0,118,110,1,0,0,0,118,111,1,0,0,0,118,112,1,0,0,0,118,
-        113,1,0,0,0,118,114,1,0,0,0,118,115,1,0,0,0,118,116,1,0,0,0,118,
-        117,1,0,0,0,119,3,1,0,0,0,120,124,5,1,0,0,121,123,3,2,1,0,122,121,
-        1,0,0,0,123,126,1,0,0,0,124,122,1,0,0,0,124,125,1,0,0,0,125,127,
-        1,0,0,0,126,124,1,0,0,0,127,128,5,2,0,0,128,5,1,0,0,0,129,130,7,
-        0,0,0,130,132,5,59,0,0,131,133,3,10,5,0,132,131,1,0,0,0,132,133,
-        1,0,0,0,133,135,1,0,0,0,134,136,3,12,6,0,135,134,1,0,0,0,135,136,
-        1,0,0,0,136,137,1,0,0,0,137,138,5,5,0,0,138,7,1,0,0,0,139,140,5,
-        6,0,0,140,142,5,59,0,0,141,143,3,10,5,0,142,141,1,0,0,0,142,143,
+        45,3,0,46,46,53,55,59,59,501,0,95,1,0,0,0,2,118,1,0,0,0,4,120,1,
+        0,0,0,6,129,1,0,0,0,8,139,1,0,0,0,10,149,1,0,0,0,12,152,1,0,0,0,
+        14,167,1,0,0,0,16,169,1,0,0,0,18,172,1,0,0,0,20,178,1,0,0,0,22,187,
+        1,0,0,0,24,193,1,0,0,0,26,201,1,0,0,0,28,218,1,0,0,0,30,226,1,0,
+        0,0,32,229,1,0,0,0,34,232,1,0,0,0,36,238,1,0,0,0,38,246,1,0,0,0,
+        40,262,1,0,0,0,42,271,1,0,0,0,44,279,1,0,0,0,46,292,1,0,0,0,48,300,
+        1,0,0,0,50,305,1,0,0,0,52,323,1,0,0,0,54,325,1,0,0,0,56,338,1,0,
+        0,0,58,340,1,0,0,0,60,348,1,0,0,0,62,356,1,0,0,0,64,364,1,0,0,0,
+        66,372,1,0,0,0,68,380,1,0,0,0,70,388,1,0,0,0,72,399,1,0,0,0,74,407,
+        1,0,0,0,76,414,1,0,0,0,78,416,1,0,0,0,80,432,1,0,0,0,82,445,1,0,
+        0,0,84,447,1,0,0,0,86,455,1,0,0,0,88,468,1,0,0,0,90,476,1,0,0,0,
+        92,94,3,2,1,0,93,92,1,0,0,0,94,97,1,0,0,0,95,93,1,0,0,0,95,96,1,
+        0,0,0,96,98,1,0,0,0,97,95,1,0,0,0,98,99,5,0,0,1,99,1,1,0,0,0,100,
+        119,3,6,3,0,101,119,3,8,4,0,102,119,3,14,7,0,103,119,3,44,22,0,104,
+        119,3,50,25,0,105,119,3,16,8,0,106,119,3,18,9,0,107,119,3,4,2,0,
+        108,119,3,20,10,0,109,119,3,22,11,0,110,119,3,24,12,0,111,119,3,
+        26,13,0,112,119,3,28,14,0,113,119,3,36,18,0,114,119,3,38,19,0,115,
+        119,3,30,15,0,116,119,3,32,16,0,117,119,3,34,17,0,118,100,1,0,0,
+        0,118,101,1,0,0,0,118,102,1,0,0,0,118,103,1,0,0,0,118,104,1,0,0,
+        0,118,105,1,0,0,0,118,106,1,0,0,0,118,107,1,0,0,0,118,108,1,0,0,
+        0,118,109,1,0,0,0,118,110,1,0,0,0,118,111,1,0,0,0,118,112,1,0,0,
+        0,118,113,1,0,0,0,118,114,1,0,0,0,118,115,1,0,0,0,118,116,1,0,0,
+        0,118,117,1,0,0,0,119,3,1,0,0,0,120,124,5,1,0,0,121,123,3,2,1,0,
+        122,121,1,0,0,0,123,126,1,0,0,0,124,122,1,0,0,0,124,125,1,0,0,0,
+        125,127,1,0,0,0,126,124,1,0,0,0,127,128,5,2,0,0,128,5,1,0,0,0,129,
+        130,7,0,0,0,130,132,5,59,0,0,131,133,3,10,5,0,132,131,1,0,0,0,132,
+        133,1,0,0,0,133,135,1,0,0,0,134,136,3,12,6,0,135,134,1,0,0,0,135,
+        136,1,0,0,0,136,137,1,0,0,0,137,138,5,5,0,0,138,7,1,0,0,0,139,140,
+        5,6,0,0,140,142,5,59,0,0,141,143,3,10,5,0,142,141,1,0,0,0,142,143,
         1,0,0,0,143,145,1,0,0,0,144,146,3,12,6,0,145,144,1,0,0,0,145,146,
         1,0,0,0,146,147,1,0,0,0,147,148,5,5,0,0,148,9,1,0,0,0,149,150,5,
         7,0,0,150,151,3,88,44,0,151,11,1,0,0,0,152,153,5,8,0,0,153,154,3,
@@ -384,12 +384,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitProgram" ):
                 listener.exitProgram(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitProgram" ):
-                return visitor.visitProgram(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -510,12 +504,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitStatement" ):
                 listener.exitStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitStatement" ):
-                return visitor.visitStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -671,12 +659,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitBlock" ):
                 listener.exitBlock(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitBlock" ):
-                return visitor.visitBlock(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -738,12 +720,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitVariableDeclaration" ):
                 listener.exitVariableDeclaration(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitVariableDeclaration" ):
-                return visitor.visitVariableDeclaration(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -820,12 +796,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitConstantDeclaration" ):
                 listener.exitConstantDeclaration(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitConstantDeclaration" ):
-                return visitor.visitConstantDeclaration(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -889,12 +859,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitTypeAnnotation" ):
                 listener.exitTypeAnnotation(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitTypeAnnotation" ):
-                return visitor.visitTypeAnnotation(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -938,12 +902,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitInitializer" ):
                 listener.exitInitializer(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitInitializer" ):
-                return visitor.visitInitializer(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -994,12 +952,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitAssignment" ):
                 listener.exitAssignment(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitAssignment" ):
-                return visitor.visitAssignment(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1072,12 +1024,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitExpressionStatement" ):
                 listener.exitExpressionStatement(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitExpressionStatement" ):
-                return visitor.visitExpressionStatement(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -1121,12 +1067,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitPrintStatement" ):
                 listener.exitPrintStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitPrintStatement" ):
-                return visitor.visitPrintStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1184,12 +1124,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitIfStatement" ):
                 listener.exitIfStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitIfStatement" ):
-                return visitor.visitIfStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1256,12 +1190,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitWhileStatement" ):
                 listener.exitWhileStatement(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitWhileStatement" ):
-                return visitor.visitWhileStatement(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -1315,12 +1243,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitDoWhileStatement" ):
                 listener.exitDoWhileStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitDoWhileStatement" ):
-                return visitor.visitDoWhileStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1390,12 +1312,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitForStatement" ):
                 listener.exitForStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitForStatement" ):
-                return visitor.visitForStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1489,12 +1405,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitForeachStatement" ):
                 listener.exitForeachStatement(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitForeachStatement" ):
-                return visitor.visitForeachStatement(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -1546,12 +1456,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitBreakStatement" ):
                 listener.exitBreakStatement(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitBreakStatement" ):
-                return visitor.visitBreakStatement(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -1592,12 +1496,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitContinueStatement" ):
                 listener.exitContinueStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitContinueStatement" ):
-                return visitor.visitContinueStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1642,12 +1540,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitReturnStatement" ):
                 listener.exitReturnStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitReturnStatement" ):
-                return visitor.visitReturnStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1707,12 +1599,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitTryCatchStatement" ):
                 listener.exitTryCatchStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitTryCatchStatement" ):
-                return visitor.visitTryCatchStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1778,12 +1664,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitSwitchStatement" ):
                 listener.exitSwitchStatement(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitSwitchStatement" ):
-                return visitor.visitSwitchStatement(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1863,12 +1743,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitSwitchCase" ):
                 listener.exitSwitchCase(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitSwitchCase" ):
-                return visitor.visitSwitchCase(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -1928,12 +1802,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitDefaultCase" ):
                 listener.exitDefaultCase(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitDefaultCase" ):
-                return visitor.visitDefaultCase(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2000,12 +1868,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitFunctionDeclaration" ):
                 listener.exitFunctionDeclaration(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitFunctionDeclaration" ):
-                return visitor.visitFunctionDeclaration(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2079,12 +1941,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitParameters" ):
                 listener.exitParameters(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitParameters" ):
-                return visitor.visitParameters(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -2142,12 +1998,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitParameter" ):
                 listener.exitParameter(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitParameter" ):
-                return visitor.visitParameter(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2210,12 +2060,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitClassDeclaration" ):
                 listener.exitClassDeclaration(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitClassDeclaration" ):
-                return visitor.visitClassDeclaration(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2294,12 +2138,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitClassMember" ):
                 listener.exitClassMember(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitClassMember" ):
-                return visitor.visitClassMember(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -2360,12 +2198,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitExpression" ):
                 listener.exitExpression(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitExpression" ):
-                return visitor.visitExpression(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -2421,12 +2253,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitExprNoAssign" ):
                 listener.exitExprNoAssign(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitExprNoAssign" ):
-                return visitor.visitExprNoAssign(self)
-            else:
-                return visitor.visitChildren(self)
-
 
     class PropertyAssignExprContext(AssignmentExprContext):
 
@@ -2452,12 +2278,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitPropertyAssignExpr" ):
                 listener.exitPropertyAssignExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitPropertyAssignExpr" ):
-                return visitor.visitPropertyAssignExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
     class AssignExprContext(AssignmentExprContext):
 
@@ -2480,12 +2300,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitAssignExpr" ):
                 listener.exitAssignExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitAssignExpr" ):
-                return visitor.visitAssignExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2581,12 +2395,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitTernaryExpr" ):
                 listener.exitTernaryExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitTernaryExpr" ):
-                return visitor.visitTernaryExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
     def conditionalExpr(self):
@@ -2647,12 +2455,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitLogicalOrExpr" ):
                 listener.exitLogicalOrExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitLogicalOrExpr" ):
-                return visitor.visitLogicalOrExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -2711,12 +2513,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitLogicalAndExpr" ):
                 listener.exitLogicalAndExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitLogicalAndExpr" ):
-                return visitor.visitLogicalAndExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -2774,12 +2570,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitEqualityExpr" ):
                 listener.exitEqualityExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitEqualityExpr" ):
-                return visitor.visitEqualityExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2844,12 +2634,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitRelationalExpr" ):
                 listener.exitRelationalExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitRelationalExpr" ):
-                return visitor.visitRelationalExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -2912,12 +2696,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitAdditiveExpr" ):
                 listener.exitAdditiveExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitAdditiveExpr" ):
-                return visitor.visitAdditiveExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -2982,12 +2760,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitMultiplicativeExpr" ):
                 listener.exitMultiplicativeExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitMultiplicativeExpr" ):
-                return visitor.visitMultiplicativeExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -3051,12 +2823,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitUnaryExpr" ):
                 listener.exitUnaryExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitUnaryExpr" ):
-                return visitor.visitUnaryExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -3129,12 +2895,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitPrimaryExpr" ):
                 listener.exitPrimaryExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitPrimaryExpr" ):
-                return visitor.visitPrimaryExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -3201,12 +2961,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitLiteralExpr" ):
                 listener.exitLiteralExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitLiteralExpr" ):
-                return visitor.visitLiteralExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -3285,12 +3039,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitLeftHandSide" ):
                 listener.exitLeftHandSide(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitLeftHandSide" ):
-                return visitor.visitLeftHandSide(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -3356,12 +3104,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitIdentifierExpr" ):
                 listener.exitIdentifierExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitIdentifierExpr" ):
-                return visitor.visitIdentifierExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
     class NewExprContext(PrimaryAtomContext):
 
@@ -3383,12 +3125,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitNewExpr" ):
                 listener.exitNewExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitNewExpr" ):
-                return visitor.visitNewExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
     class ThisExprContext(PrimaryAtomContext):
 
@@ -3404,12 +3140,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitThisExpr" ):
                 listener.exitThisExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitThisExpr" ):
-                return visitor.visitThisExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -3501,12 +3231,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitCallExpr" ):
                 listener.exitCallExpr(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitCallExpr" ):
-                return visitor.visitCallExpr(self)
-            else:
-                return visitor.visitChildren(self)
-
 
     class PropertyAccessExprContext(SuffixOpContext):
 
@@ -3524,12 +3248,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitPropertyAccessExpr" ):
                 listener.exitPropertyAccessExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitPropertyAccessExpr" ):
-                return visitor.visitPropertyAccessExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
     class IndexExprContext(SuffixOpContext):
@@ -3549,12 +3267,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitIndexExpr" ):
                 listener.exitIndexExpr(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitIndexExpr" ):
-                return visitor.visitIndexExpr(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -3638,12 +3350,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitArguments" ):
                 listener.exitArguments(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitArguments" ):
-                return visitor.visitArguments(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -3701,12 +3407,6 @@ class CompiscriptParser ( Parser ):
         def exitRule(self, listener:ParseTreeListener):
             if hasattr( listener, "exitArrayLiteral" ):
                 listener.exitArrayLiteral(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitArrayLiteral" ):
-                return visitor.visitArrayLiteral(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -3773,12 +3473,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitType" ):
                 listener.exitType(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitType" ):
-                return visitor.visitType(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -3833,12 +3527,6 @@ class CompiscriptParser ( Parser ):
             if hasattr( listener, "exitBaseType" ):
                 listener.exitBaseType(self)
 
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitBaseType" ):
-                return visitor.visitBaseType(self)
-            else:
-                return visitor.visitChildren(self)
-
 
 
 
@@ -3851,7 +3539,7 @@ class CompiscriptParser ( Parser ):
             self.enterOuterAlt(localctx, 1)
             self.state = 476
             _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & 639511147086610432) != 0)):
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & 639581515830788096) != 0)):
                 self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)

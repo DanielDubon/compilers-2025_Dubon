@@ -3,17 +3,35 @@ from dataclasses import dataclass
 from typing import Optional, Union
 
 
+# Tipos primitivos
 @dataclass(frozen=True)
 class Type:
     name: str
-    def __str__(self) -> str:
-        return self.name
+    def __str__(self): return self.name
+
+INT = Type("integer")
+BOOL = Type("boolean")
+STR = Type("string")
+FLT = Type("float")
+VOID = Type("void")
+NULL = Type("null")
+UNKNOWN = Type("<unknown>")
+
+TYPE_BY_NAME = { t.name: t for t in (INT, BOOL, STR, FLT, VOID, NULL) }
+
+TYPE_SIZES = {
+    INT.name: 4,
+    BOOL.name: 1,
+    STR.name: 8,   # Asumimos que un string es una referencia/puntero
+    FLT.name: 8,
+    "default": 8   # Tamaño por defecto para arreglos y objetos (puntero)
+}
+
 
 @dataclass(frozen=True)
 class ArrayType:
     elem: "TypeLike"
-    def __str__(self) -> str:
-        return f"{self.elem}[]"
+    def __str__(self): return f"{self.elem}[]"
 
 TypeLike = Union[Type, ArrayType]
 
@@ -103,6 +121,10 @@ class VarInfo:
     is_const: bool
     token: object
     offset: Optional[int] = None
+    memory_address: Optional[str] = None  # Dirección de memoria para código assembler
+    is_global: bool = False  # Si es variable global
+    is_parameter: bool = False  # Si es parámetro de función
+    is_temporary: bool = False  # Si es variable temporal
 
 class ScopeStack:
     def __init__(self) -> None:

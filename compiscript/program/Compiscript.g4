@@ -154,7 +154,7 @@ arrayLiteral: '[' (expression (',' expression)*)? ']';
 // ------------------
 
 type: baseType ('[' ']')*;
-baseType: 'boolean' | 'integer' | 'string' | Identifier;
+baseType: 'boolean' | 'integer' | 'string' | 'null' | Identifier;
 
 // ------------------
 // Lexer Rules

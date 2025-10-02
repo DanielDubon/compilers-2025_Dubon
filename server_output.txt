@@ -1,3 +1,13 @@
+ * Serving Flask app 'server'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.30.14.14:5000
+Press CTRL+C to quit
+127.0.0.1 - - [01/Oct/2025 20:17:55] "OPTIONS /compile HTTP/1.1" 200 -
+
+--- Parse Tree Generado ---
 program
   statement
     constantDeclaration
@@ -906,3 +916,19 @@ program
       TOKEN())
       TOKEN(;)
   TOKEN(<EOF>)
+127.0.0.1 - - [01/Oct/2025 20:17:55] "POST /compile HTTP/1.1" 200 -
+
+---------------------------
+
+[DEBUG AstBuilder] Entering visitVariableDeclaration for globalCounter
+[DEBUG AstBuilder] visitVariableDeclaration returning <class 'ast_nodes.VarDecl'>: globalCounter
+[DEBUG AstBuilder] Entering visitVariableDeclaration for message
+[DEBUG AstBuilder] visitVariableDeclaration returning <class 'ast_nodes.VarDecl'>: message
+[DEBUG AstBuilder] Entering visitVariableDeclaration for isActive
+[DEBUG AstBuilder] visitVariableDeclaration returning <class 'ast_nodes.VarDecl'>: isActive
+[DEBUG AstBuilder] Entering visitVariableDeclaration for emptyVar
+[DEBUG AstBuilder] visitVariableDeclaration returning <class 'ast_nodes.VarDecl'>: emptyVar
+[DEBUG AstBuilder] Entering visitVariableDeclaration for localResult
+[DEBUG AstBuilder] visitVariableDeclaration returning <class 'ast_nodes.VarDecl'>: localResult
+[DEBUG AstBuilder] Entering visitVariableDeclaration for current
+[DEBUG AstBuilder] visitVariableDeclaration returning <class 'ast_nodes.VarDecl'>: current

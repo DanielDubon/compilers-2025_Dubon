@@ -1,8 +1,8 @@
-from CompiscriptVisitor import CompiscriptVisitor
 from CompiscriptParser import CompiscriptParser
-from antlr4 import ParserRuleContext
+from antlr4 import ParserRuleContext, TerminalNode # Import TerminalNode
 from typing import List, Optional
 import ast_nodes as A
+from ast_nodes import ExprStmt, Call, Return, Assign # Nuevas importaciones
 
 def pos(ctx: ParserRuleContext):
     t = ctx.start if hasattr(ctx, "start") else None
@@ -10,9 +10,45 @@ def pos(ctx: ParserRuleContext):
     col  = getattr(t, "column", 0) or 0
     return line, col
 
-class AstBuilder(CompiscriptVisitor):
+class AstBuilder: # No hereda de CompiscriptVisitor
 
-  
+    def visit(self, node):
+        if node is None:
+            return None
+        if isinstance(node, TerminalNode): # Handle terminals directly
+            return self.visitTerminal(node)
+        
+        # For context nodes, dispatch based on class name
+        method_name = 'visit' + node.__class__.__name__.replace("Context", "")
+        visitor = getattr(self, method_name, self.generic_visit)
+        return visitor(node)
+
+    def generic_visit(self, node):
+        # Default behavior: visit children if no specific method
+        # This is for parse tree nodes that don't have a specific visitX method
+        result = None
+        if hasattr(node, 'children') and node.children:
+            for child in node.children:
+                res = self.visit(child)
+                # If a child visitor returns a list, extend the result
+                if isinstance(res, list):
+                    if result is None: result = []
+                    result.extend(res)
+                # If a child visitor returns a single AST node, add it to a list
+                elif res is not None:
+                    if result is None: result = []
+                    result.append(res)
+        return result # Generic visit might return a list of children's results
+
+    def visitTerminal(self, node):
+        # Terminals are tokens, we usually don't create AST nodes for them directly
+        # But they might be needed for literals or identifiers
+        return node.getText()
+
+    def visitErrorNode(self, node):
+        # Handle error nodes if necessary
+        return None
+
     def visitProgram(self, ctx: CompiscriptParser.ProgramContext) -> A.Program:
         line, col = pos(ctx)
         decls: List[A.Decl] = []
@@ -28,12 +64,15 @@ class AstBuilder(CompiscriptVisitor):
 
   
     def visitVariableDeclaration(self, ctx):
+        print(f"[DEBUG AstBuilder] Entering visitVariableDeclaration for {ctx.Identifier().getText()}")
         line, col = pos(ctx)
         kind = "let" if ctx.getChild(0).getText() == "let" else "var"
         name = ctx.Identifier().getText()
         type_ref = self.visit(ctx.typeAnnotation().type_()) if ctx.typeAnnotation() else None
         init = self.visit(ctx.initializer().expression()) if ctx.initializer() else None
-        return A.VarDecl(line, col, name, type_ref, init, kind)
+        var_decl_node = A.VarDecl(line, col, name, type_ref, init, kind)
+        print(f"[DEBUG AstBuilder] visitVariableDeclaration returning {type(var_decl_node)}: {var_decl_node.name}")
+        return var_decl_node
 
 
     def visitConstantDeclaration(self, ctx):
@@ -109,15 +148,30 @@ class AstBuilder(CompiscriptVisitor):
         return A.Block(line, col, stmts)
 
     def visitStatement(self, ctx):
-        for getter in (
-            ctx.returnStatement, ctx.ifStatement, ctx.whileStatement, ctx.doWhileStatement,
-            ctx.forStatement, ctx.foreachStatement, ctx.switchStatement, ctx.tryCatchStatement,
-            ctx.breakStatement, ctx.continueStatement, ctx.block, ctx.expressionStatement,
-            ctx.assignment, ctx.variableDeclaration, ctx.constantDeclaration, ctx.functionDeclaration,
-            ctx.classDeclaration,
-        ):
-            if getter():
-                return self.visit(getter())
+        # Un contexto de sentencia típicamente tiene un solo hijo, que es el tipo de sentencia específico.
+        # Visitamos ese hijo para despachar al método visitor correcto (ej. visitVariableDeclaration).
+        return self.visit(ctx.getChild(0))
+
+    def visitPrintStatement(self, ctx):
+        line, col = pos(ctx)
+        # A print statement is essentially an expression statement with a a call to 'print'
+        arg_expr = self.visit(ctx.expression())
+        
+        # Create a Call node for 'print'
+        print_call = A.Call(line, col, A.Name(line, col, "print"), [arg_expr])
+        
+        # Wrap it in an ExprStmt
+        return A.ExprStmt(line, col, print_call)
+
+    def visitReturnStatement(self, ctx):
+        line, col = pos(ctx)
+        expr = self.visit(ctx.expression()) if ctx.expression() else None
+        return A.Return(line, col, expr)
+
+    def visitExpressionStatement(self, ctx):
+        line, col = pos(ctx)
+        expr = self.visit(ctx.expression())
+        return A.ExprStmt(line, col, expr)
 
 
     def visitIfStatement(self, ctx):
@@ -204,29 +258,32 @@ class AstBuilder(CompiscriptVisitor):
         return A.Return(line, col, e)
 
     def visitExpressionStatement(self, ctx):
-        e = self.visit(ctx.expression())
         line, col = pos(ctx)
-        return A.ExprStmt(line, col, e)
+        expr = self.visit(ctx.expression())
+        return A.ExprStmt(line, col, expr)
 
-  
     def visitAssignment(self, ctx):
         line, col = pos(ctx)
-        exprs = ctx.expression()
-        ids = ctx.Identifier()
-        if len(exprs) == 2 and ids:
-            obj = self.visit(exprs[0])
-            member = ids.getText() if hasattr(ids, "getText") else ids[0].getText()
-            value = self.visit(exprs[1])
-            return A.Assign(line, col, A.Member(line, col, obj, member), value)
-        if len(exprs) == 3: 
-            arr = self.visit(exprs[0]); idx = self.visit(exprs[1]); val = self.visit(exprs[2])
-            return A.Assign(line, col, A.Index(line, col, arr, idx), val)
-        if ids:
-            name = (ids[0] if isinstance(ids, list) else ids).getText()
-            value = self.visit(exprs[-1])
-            return A.Assign(line, col, A.Name(line, col, name), value)
-       
-        return A.ExprStmt(line, col, self.visit(exprs[-1]))
+        # El lado derecho es siempre la última expresión
+        rhs_expr = self.visit(ctx.expression()[-1])
+
+        # El lado izquierdo puede ser un Identifier, PropertyAssignment o ArrayElementAssignment
+        if ctx.Identifier(): # Identifier = expression
+            name = ctx.Identifier().getText() # Corregido: no es una lista
+            target = A.Name(line, col, name)
+        elif len(ctx.expression()) == 2 and ctx.Identifier(): # PropertyAssignment: obj.member = expression
+            obj_expr = self.visit(ctx.expression()[0])
+            member_name = ctx.Identifier().getText() # Corregido: no es una lista
+            target = A.Member(line, col, obj_expr, member_name)
+        elif len(ctx.expression()) == 3: # ArrayElementAssignment: arr[index] = expression
+            arr_expr = self.visit(ctx.expression()[0])
+            idx_expr = self.visit(ctx.expression()[1])
+            target = A.Index(line, col, arr_expr, idx_expr)
+        else:
+            # Fallback, esto no debería ocurrir si la gramática es correcta
+            target = A.Name(line, col, "_unknown_target")
+
+        return A.Assign(line, col, target, rhs_expr)
 
     # ----- expresiones -----
 

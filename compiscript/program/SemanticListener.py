@@ -5,7 +5,7 @@ from symbols import (
     ScopeStack, VarInfo,
     Type, ArrayType, TypeLike,
     INT, BOOL, STR, FLT, VOID, NULL, UNKNOWN,
-    TYPE_BY_NAME,
+    TYPE_BY_NAME, TYPE_SIZES,
     is_boolean, is_numeric, is_string, is_unknown,
     type_equals, numeric_result, are_eq_comparable, are_order_comparable,
     can_concat_with_plus, is_assignable,
@@ -19,6 +19,7 @@ class SemanticListener(CompiscriptListener):
     def __init__(self, source_lines):
         self.symbtab = SymbolTable()
         self.scopes = ScopeStack()
+        self.offset_stack: list[int] = [0] # Global scope offset
         self.errors = []
         self.source_lines = source_lines
         self.types: dict[object, TypeLike] = {}
@@ -28,7 +29,7 @@ class SemanticListener(CompiscriptListener):
         self.switch_depth = 0
         self.block_term_stack = []
         self.class_stack: list[str] = []
-        self.class_fields: dict[str, dict[str, TypeLike]] = {}
+        self.class_fields: dict[str, dict[str, TypeLike]] = {} 
         self.class_extends: dict[str, Optional[str]] = {}
         self.returns: dict[object, bool] = {}
         self._switch_expr_nodes: list[object] = []
@@ -37,10 +38,14 @@ class SemanticListener(CompiscriptListener):
         self.func_locals: Dict[tuple[Optional[str], str], set[str]] = {}
         self.func_captures: Dict[tuple[Optional[str], str], set[str]] = {}
 
-
+    def _get_type_size(self, var_type: TypeLike) -> int:
+        if isinstance(var_type, Type):
+            return TYPE_SIZES.get(var_type.name, TYPE_SIZES["default"])
+        elif isinstance(var_type, ArrayType):
+            return TYPE_SIZES["default"] # Arrays are references
+        return 0 # Unknown or void types
 
     # ------------ Utilidades ----------------
-
     def _tok(self, ctx: ParserRuleContext):
         
         if hasattr(ctx, "start"):
@@ -76,6 +81,7 @@ class SemanticListener(CompiscriptListener):
     def enterBlock(self, ctx):
         # Abre un nuevo ambito
         self.scopes.push()
+        self.offset_stack.append(0)
         self.block_term_stack.append(False)
 
        
@@ -118,6 +124,7 @@ class SemanticListener(CompiscriptListener):
 
     def exitBlock(self, ctx):
         self.scopes.pop()
+        self.offset_stack.pop()
         self.block_term_stack.pop()
         always_returns = False
         for st in (ctx.statement() or []):
@@ -215,15 +222,23 @@ class SemanticListener(CompiscriptListener):
         else:
             typ = annotated if annotated is not None else rhs_t
 
-        ok = self.scopes.declare(name, VarInfo(name, typ, True, id_tok))
+        # Calculate offset
+        current_offset = self.offset_stack[-1]
+        var_size = self._get_type_size(typ)
+        
+        # Create VarInfo with offset
+        var_info = VarInfo(name, typ, True, id_tok, offset=current_offset)
+
+        ok = self.scopes.declare(name, var_info)
         if not ok:
             self._err(ctx, "Redeclaracion de '{}' en el mismo ambito.".format(name))
         else:
+            self.offset_stack[-1] += var_size # Increment offset
             if self.func_key_stack:
                 self.func_locals[self.func_key_stack[-1]].add(name)
         self._set_returns(ctx, False)
         if ok and not self.class_stack:  # solo si no es campo de clase
-            self.symbtab.declare_var(name, VarInfo(name, typ, True, id_tok))
+            self.symbtab.declare_var(name, var_info)
 
     def exitPrintStatement(self, ctx):
         
@@ -281,14 +296,23 @@ class SemanticListener(CompiscriptListener):
                 self._err(ctx, "Tipo incompatible en inicializacion de variable '{}': se esperaba {}, se obtuvo {}"
                           .format(name, annotated, init_t))
 
-        ok = self.scopes.declare(name, VarInfo(name, var_t, False, id_tok))
+        # Calculate offset
+        current_offset = self.offset_stack[-1]
+        var_size = self._get_type_size(var_t) # Use var_t, which is the inferred/annotated type
+
+        # Create VarInfo with offset
+        var_info = VarInfo(name, var_t, False, id_tok, offset=current_offset)
+
+        ok = self.scopes.declare(name, var_info)
         if not ok:
             self._err(ctx, "Redeclaracion de '{}' en el mismo ambito.".format(name))
+        else:
+            self.offset_stack[-1] += var_size # Increment offset
+            if self.func_key_stack:
+                self.func_locals[self.func_key_stack[-1]].add(name)
         self._set_returns(ctx, False)
-        if ok and self.func_key_stack:
-            self.func_locals[self.func_key_stack[-1]].add(name)
         if ok and not self.class_stack:
-            self.symbtab.declare_var(name, VarInfo(name, var_t, False, id_tok))
+            self.symbtab.declare_var(name, var_info)
 
     # ---------- Asignaciones ----------------
 
@@ -954,13 +978,35 @@ class SemanticListener(CompiscriptListener):
             self.symbtab.declare_func(f_info)
 
         self.scopes.push()
+        self.offset_stack.append(0) # Nuevo registro de activacion
+
+        # Parameters are part of the function's local scope and get offsets
+        params_infos_with_offsets = [] # New list to store VarInfo with offsets
         for p, ptype in zip(params_nodes, param_types):
             id_tok = p.Identifier().getSymbol()
             pname = id_tok.text
-            ok = self.scopes.declare(pname, VarInfo(pname, ptype, False, id_tok))
-            self.func_locals[key].add(pname)
+
+            # Calculate offset for parameter
+            current_offset = self.offset_stack[-1]
+            param_size = self._get_type_size(ptype)
+            
+            param_var_info = VarInfo(pname, ptype, False, id_tok, offset=current_offset)
+            params_infos_with_offsets.append(param_var_info) # Add to the list for FunctionInfo
+
+            ok = self.scopes.declare(pname, param_var_info) # Declare with offset
             if not ok:
                 self._err(p, f"Parametro '{pname}' redeclarado en la misma funcion.")
+            else:
+                self.offset_stack[-1] += param_size # Increment offset for next variable
+
+            self.func_locals[key].add(pname)
+
+        # Now create f_info with parameters that have offsets
+        f_info = FunctionInfo(fname, params_infos_with_offsets, ret_t,
+                              is_method=(self.class_stack != []),
+                              is_constructor=(fname == "constructor"))
+        self.symbtab.declare_func(f_info)
+
         self.func_ret_stack.append(ret_t)
 
 
@@ -989,6 +1035,7 @@ class SemanticListener(CompiscriptListener):
                             f"debe retornar {expected} en todos los caminos.")
         self.func_key_stack.pop()
         self.scopes.pop()
+        self.offset_stack.pop()
         self.func_ret_stack.pop()
 
     

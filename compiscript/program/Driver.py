@@ -151,16 +151,54 @@ def main(argv):
 
     if want_tac:
         print("Generando codigo intermedio (TAC)...")
+        # Asignar direcciones de memoria y etiquetas antes de generar TAC
+        sem.symbtab.assign_memory_addresses()
+        sem.symbtab.assign_function_labels()
+        
         tac_gen = TACGenerator(sem.symbtab)
         tac_code = tac_gen.generate(ast)
         tac_path = os.path.join(script_dir, "tac.txt")
         with open(tac_path, "w", encoding="utf-8") as f:
             f.write("\n".join(map(str, tac_code)))
         print(f"TAC guardado en: {tac_path}")
+        
+        # Mostrar información adicional de la tabla de símbolos
+        print("\n--- Información adicional para generación de código assembler ---")
+        print(sem.symbtab.dump())
+
+    # Generar imágenes PNG automáticamente
+    print("Generando imágenes PNG...")
+    try:
+        import subprocess
+        
+        # Generar parse_tree.png
+        parse_tree_dot = os.path.join(script_dir, 'parse_tree.dot')
+        parse_tree_png = os.path.join(script_dir, 'parse_tree.png')
+        result = subprocess.run(['dot', '-Tpng', parse_tree_dot, '-o', parse_tree_png], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✓ Parse tree PNG generado: {parse_tree_png}")
+        else:
+            print(f"⚠ Error generando parse_tree.png: {result.stderr}")
+        
+        # Generar ast.png
+        ast_dot = os.path.join(script_dir, 'ast.dot')
+        ast_png = os.path.join(script_dir, 'ast.png')
+        result = subprocess.run(['dot', '-Tpng', ast_dot, '-o', ast_png], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✓ AST PNG generado: {ast_png}")
+        else:
+            print(f"⚠ Error generando ast.png: {result.stderr}")
+            
+    except FileNotFoundError:
+        print("⚠ Graphviz (dot) no encontrado. Instala con: sudo apt-get install graphviz")
+    except Exception as e:
+        print(f"⚠ Error generando imágenes PNG: {e}")
 
     print("Analisis completado.")
-    print(f"Parse tree: {os.path.join(script_dir, 'parse_tree.txt')}, {os.path.join(script_dir, 'parse_tree.dot')}  (usa: dot -Tpng {os.path.join(script_dir, 'parse_tree.dot')} -o {os.path.join(script_dir, 'parse_tree.png')})")
-    print(f"AST:        {os.path.join(script_dir, 'ast.txt')}, {os.path.join(script_dir, 'ast.dot')}                (usa: dot -Tpng {os.path.join(script_dir, 'ast.dot')} -o {os.path.join(script_dir, 'ast.png')})")
+    print(f"Parse tree: {os.path.join(script_dir, 'parse_tree.txt')}, {os.path.join(script_dir, 'parse_tree.dot')}, {os.path.join(script_dir, 'parse_tree.png')}")
+    print(f"AST:        {os.path.join(script_dir, 'ast.txt')}, {os.path.join(script_dir, 'ast.dot')}, {os.path.join(script_dir, 'ast.png')}")
 
 if __name__ == "__main__":
     main(sys.argv)
