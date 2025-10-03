@@ -1,7 +1,28 @@
 
 from ast_nodes import Node, Program, VarDecl, Assign, Binary, LiteralInt, Name, LiteralString, LiteralBool, LiteralNull, If, Block, ExprStmt, Call, While, FunctionDecl, DoWhile, For, Foreach, Switch, SwitchCase, Break, Continue, Return, TryCatch, Member, Index, New, Ternary, Unary, ArrayLiteral, LiteralFloat # Importar nodos necesarios
-from tac import TAC, Assign as TAC_Assign, BinaryOp, Label, Jump, CondJump, Param, Call as TAC_Call, BeginFunc, EndFunc, Return
+from tac import TAC, Assign as TAC_Assign, BinaryOp, Label, Jump, CondJump, Param, Call as TAC_Call, BeginFunc, EndFunc, Return, UnaryOp
 from symbol_table import SymbolTable
+from ast_nodes import Return as AST_Return
+from tac import Return as TAC_Return
+
+class TempPool:
+    def __init__(self, prefix="t"):
+        self.prefix = prefix
+        self.free = []         
+        self.counter = 0       
+
+    def acquire(self) -> str:
+        """Devuelve el nombre de un temporal reusandolo si hay libres"""
+        if self.free:
+            return self.free.pop()
+        name = f"{self.prefix}{self.counter}"
+        self.counter += 1
+        return name
+
+    def release(self, name: str) -> None:
+        """Devuelve un temporal al pool (si tiene el prefijo correcto)"""
+        if isinstance(name, str) and name.startswith(self.prefix):
+            self.free.append(name)
 
 class TACGenerator:
     def __init__(self, symbtab: SymbolTable):
@@ -9,12 +30,19 @@ class TACGenerator:
         self.code = []
         self.temp_count = 0
         self.label_count = 0
+        self.temp_pool = TempPool("t")
 
     def new_temp(self) -> str:
-        """Genera un nuevo nombre de variable temporal."""
-        temp_name = f"t{self.temp_count}"
-        self.temp_count += 1
-        return temp_name
+        return self.temp_pool.acquire()
+    
+    ARITH_OPS = {"+", "-", "*", "/"}
+    
+    def _is_temp(self, addr):
+        return isinstance(addr, str) and addr.startswith(self.temp_pool.prefix)
+    
+    def _release_if_temp(self, addr):
+        if isinstance(addr, str) and addr.startswith(self.temp_pool.prefix):
+            self.temp_pool.release(addr)
 
     def new_label(self) -> str:
         """Genera un nuevo nombre de etiqueta."""
@@ -87,6 +115,7 @@ class TACGenerator:
             if rhs_addr is None:
                 rhs_addr = "0"  # Valor por defecto
             self.code.append(TAC_Assign(target=ctx.name, source=rhs_addr))
+            self._release_if_temp(rhs_addr)
         print(f"[DEBUG TACGen] Exiting visitVarDecl for {ctx.name}")
 
     def visitAssign(self, ctx: Assign):
@@ -103,32 +132,50 @@ class TACGenerator:
         # Asumimos que el target es un nombre simple por ahora
         if hasattr(ctx.target, 'name'):
             self.code.append(TAC_Assign(target=ctx.target.name, source=rhs_addr))
+            self._release_if_temp(rhs_addr)
 
     def visitBinary(self, ctx: Binary):
-        # Manejar el caso donde left o right pueden ser listas
-        if isinstance(ctx.left, list) and len(ctx.left) > 0:
-            left_node = ctx.left[0]
-        else:
-            left_node = ctx.left
-            
-        if isinstance(ctx.right, list) and len(ctx.right) > 0:
-            right_node = ctx.right[0]
-        else:
-            right_node = ctx.right
-            
-        left_addr = self.visit(left_node)
+        # normaliza si vienen listas
+        left_node  = ctx.left[0]  if isinstance(ctx.left, list) and ctx.left  else ctx.left
+        right_node = ctx.right[0] if isinstance(ctx.right, list) and ctx.right else ctx.right
+
+        left_addr  = self.visit(left_node)
         right_addr = self.visit(right_node)
-        
-        # Manejar valores None
-        if left_addr is None:
-            left_addr = "0"
-        if right_addr is None:
-            right_addr = "0"
+
+        if left_addr is None:  left_addr = "0"
+        if right_addr is None: right_addr = "0"
+
+        if ctx.op in self.ARITH_OPS:
             
+            if self._is_temp(left_addr):
+                target = left_addr
+            elif self._is_temp(right_addr):
+                target = right_addr
+            else:
+                target = self.new_temp()
+
+            self.code.append(BinaryOp(target=target, left=left_addr, op=ctx.op, right=right_addr))
+
+            
+            if target != left_addr:
+                self._release_if_temp(left_addr)
+            if target != right_addr:
+                self._release_if_temp(right_addr)
+
+            return target
+
+        
         temp_target = self.new_temp()
         self.code.append(BinaryOp(target=temp_target, left=left_addr, op=ctx.op, right=right_addr))
+        self._release_if_temp(left_addr)
+        self._release_if_temp(right_addr)
         return temp_target
 
+
+    def visitExprStmt(self, ctx: ExprStmt):
+        addr = self.visit(ctx.expr)
+        self._release_if_temp(addr)
+        
     def visitLiteralInt(self, ctx: LiteralInt):
         return ctx.value
 
@@ -175,8 +222,7 @@ class TACGenerator:
             self.visit(ctx.then)
             self.code.append(Label(name=end_label))
 
-    def visitExprStmt(self, ctx: ExprStmt):
-        self.visit(ctx.expr)
+
 
     def visitCall(self, ctx: Call):
         # Por ahora, asumimos que el callee es un nombre simple
@@ -464,6 +510,7 @@ class TACGenerator:
         
         temp_target = self.new_temp()
         self.code.append(BinaryOp(target=temp_target, left=ctx.op, op="", right=operand_addr))
+        self._release_if_temp(operand_addr)
         return temp_target
 
     def visitArrayLiteral(self, ctx: ArrayLiteral):

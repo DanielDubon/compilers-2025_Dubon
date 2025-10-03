@@ -1,37 +1,6 @@
-MAX_VALUE = 100
-globalCounter = 0
-message = "Hello from global!"
-isActive = True
-calculateSum:
-BeginFunc
-t0 = a + b
-localResult = t0
-return localResult
-EndFunc
-countdown:
-BeginFunc
-current = start
-L0:
-if_false current goto L1
-t1 = "Counting down: " + current
-param t1
-t2 = call print, 1
-t3 = current - 1
-current = t3
-goto L0
-L1:
-param "Countdown finished!"
-t4 = call print, 1
-EndFunc
-x = 5
-y = 10
-t5 = x + y
-t6 = t5 * 2
-t7 = t6 - 3
-z = t7
-loopVar = 3
-param x
-param y
-t8 = call calculateSum, 2
-sumResult = t8
-myNull = None
+t0 = 3 * 4
+t0 = 2 + t0
+a = t0
+t0 = a / 2
+t0 = 10 - t0
+b = t0

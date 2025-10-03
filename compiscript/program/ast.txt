@@ -1,170 +1,28 @@
 Program
   .decls:
     VarDecl
-      name=MAX_VALUE
+      name=a
       .type:
         SimpleType
           name=integer
       .init:
-        LiteralInt
-          value=100
-      kind=const
-    VarDecl
-      name=globalCounter
-      .type:
-        SimpleType
-          name=integer
-      .init:
-        LiteralInt
-          value=0
-      kind=let
-    VarDecl
-      name=message
-      .type:
-        SimpleType
-          name=string
-      .init:
-        LiteralString
-          value=Hello from global!
-      kind=let
-    VarDecl
-      name=isActive
-      .type:
-        SimpleType
-          name=boolean
-      .init:
-        LiteralBool
-          value=True
-      kind=let
-    VarDecl
-      name=emptyVar
-      type=None
-      init=None
-      kind=let
-    FunctionDecl
-      name=calculateSum
-      .params:
-        Param
-          name=a
-          .type:
-            SimpleType
-              name=integer
-        Param
-          name=b
-          .type:
-            SimpleType
-              name=integer
-      .ret:
-        SimpleType
-          name=integer
-      .body:
-        Block
-          .stmts:
-            VarDecl
-              name=localResult
-              .type:
-                SimpleType
-                  name=integer
-              .init:
-                Binary
-                  op=+
-                  .left:
-                    Name
-                      name=a
-                  .right:
-                    Name
-                      name=b
-              kind=let
-            Return
-              .expr:
-                Name
-                  name=localResult
-      is_method=False
-      is_constructor=False
-    FunctionDecl
-      name=countdown
-      .params:
-        Param
-          name=start
-          .type:
-            SimpleType
-              name=integer
-      .ret:
-        SimpleType
-          name=void
-      .body:
-        Block
-          .stmts:
-            VarDecl
-              name=current
-              .type:
-                SimpleType
-                  name=integer
-              .init:
-                Name
-                  name=start
-              kind=let
-            While
-              .cond:
-                Name
-                  name=current
-                >
+        Binary
+          op=+
+          .left:
+            LiteralInt
+              value=2
+          .right:
+            Binary
+              op=*
+              .left:
                 LiteralInt
-                  value=0
-              .body:
-                Block
-                  .stmts:
-                    ExprStmt
-                      .expr:
-                        Call
-                          .callee:
-                            Name
-                              name=print
-                          .args:
-                            [Binary(line=0, col=0, op='+', left=LiteralString(line=20, col=14, value='Counting down: '), right=Name(line=20, col=34, name='current'))]
-                    Assign
-                      .target:
-                        Name
-                          name=current
-                      .value:
-                        Binary
-                          op=-
-                          .left:
-                            Name
-                              name=current
-                          .right:
-                            LiteralInt
-                              value=1
-            ExprStmt
-              .expr:
-                Call
-                  .callee:
-                    Name
-                      name=print
-                  .args:
-                    [LiteralString(line=23, col=10, value='Countdown finished!')]
-      is_method=False
-      is_constructor=False
-    VarDecl
-      name=x
-      .type:
-        SimpleType
-          name=integer
-      .init:
-        LiteralInt
-          value=5
+                  value=3
+              .right:
+                LiteralInt
+                  value=4
       kind=let
     VarDecl
-      name=y
-      .type:
-        SimpleType
-          name=integer
-      .init:
-        LiteralInt
-          value=10
-      kind=let
-    VarDecl
-      name=z
+      name=b
       .type:
         SimpleType
           name=integer
@@ -172,52 +30,15 @@ Program
         Binary
           op=-
           .left:
+            LiteralInt
+              value=10
+          .right:
             Binary
-              op=*
+              op=/
               .left:
-                Binary
-                  op=+
-                  .left:
-                    Name
-                      name=x
-                  .right:
-                    Name
-                      name=y
+                Name
+                  name=a
               .right:
                 LiteralInt
                   value=2
-          .right:
-            LiteralInt
-              value=3
-      kind=let
-    VarDecl
-      name=loopVar
-      .type:
-        SimpleType
-          name=integer
-      .init:
-        LiteralInt
-          value=3
-      kind=let
-    VarDecl
-      name=sumResult
-      .type:
-        SimpleType
-          name=integer
-      .init:
-        Call
-          .callee:
-            Name
-              name=calculateSum
-          .args:
-            [Name(line=57, col=38, name='x')]
-            [Name(line=57, col=41, name='y')]
-      kind=let
-    VarDecl
-      name=myNull
-      .type:
-        SimpleType
-          name=null
-      .init:
-        LiteralNull
       kind=let
