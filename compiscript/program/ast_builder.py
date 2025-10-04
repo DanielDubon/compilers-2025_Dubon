@@ -51,16 +51,17 @@ class AstBuilder: # No hereda de CompiscriptVisitor
 
     def visitProgram(self, ctx: CompiscriptParser.ProgramContext) -> A.Program:
         line, col = pos(ctx)
-        decls: List[A.Decl] = []
-        for ch in ctx.children[:-1]:  
+        items: List[A.Node] = []
+        for ch in ctx.children[:-1]:
             node = self.visit(ch)
-            if node is None: 
+            if node is None:
                 continue
-            if isinstance(node, list): 
-                decls.extend(d for d in node if isinstance(d, A.Decl))
-            elif isinstance(node, A.Decl):
-                decls.append(node)
-        return A.Program(line, col, decls)
+            if isinstance(node, list):
+                
+                items.extend(node)
+            else:
+                items.append(node)
+        return A.Program(line, col, items)
 
   
     def visitVariableDeclaration(self, ctx):
@@ -330,6 +331,45 @@ class AstBuilder: # No hereda de CompiscriptVisitor
             node = A.Binary(l, c, op, node, rhs)
             i += 2
         return node
+
+    
+    def _fold_binary_chain(self, ctx, valid_ops):
+        node = self.visit(ctx.getChild(0))
+        i = 1
+        while i < ctx.getChildCount():
+            op = ctx.getChild(i).getText()
+            rhs = self.visit(ctx.getChild(i+1))
+            if op in valid_ops:
+                l, c = pos(ctx.getChild(i))
+                node = A.Binary(l, c, op, node, rhs)
+                i += 2
+            else:
+                
+                i += 1
+        return node
+
+    def visitRelationalExpr(self, ctx):
+        return self._fold_binary_chain(ctx, {"<", "<=", ">", ">="})
+
+    def visitEqualityExpr(self, ctx):
+        return self._fold_binary_chain(ctx, {"==", "!="})
+
+   
+    def visitComparisonExpr(self, ctx):
+        return self._fold_binary_chain(ctx, {"<", "<=", ">", ">=", "==", "!="})
+
+  
+    def visitLogicalOrExpr(self, ctx):
+        node = self.visit(ctx.getChild(0))
+        i = 1
+        while i < ctx.getChildCount():
+            op = ctx.getChild(i).getText()   
+            rhs = self.visit(ctx.getChild(i+1))
+            l, c = pos(ctx.getChild(i))
+            node = A.Binary(l, c, op, node, rhs)
+            i += 2
+        return node
+
 
     def visitUnaryExpr(self, ctx):
         if ctx.getChildCount() == 2:

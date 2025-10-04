@@ -86,13 +86,14 @@ class TACGenerator:
 
     def visitProgram(self, ctx: Program):
         print(f"[DEBUG TACGen] Entering visitProgram")
-        for decl in ctx.decls:
-            self.visit(decl)
+        
+        self.generic_visit(ctx)
         print(f"[DEBUG TACGen] Exiting visitProgram")
 
+
+
     def visitBlock(self, ctx: Block):
-        for stmt in ctx.stmts:
-            self.visit(stmt)
+        self.generic_visit(ctx)
 
     def visitFunctionDecl(self, ctx: FunctionDecl):
         self.code.append(Label(name=ctx.name))
