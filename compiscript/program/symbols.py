@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Union
-
+from dataclasses import dataclass
+from typing import Optional, Union
 
 # Tipos primitivos
 @dataclass(frozen=True)
@@ -117,29 +118,36 @@ def is_assignable(target: TypeLike, value: TypeLike) -> bool:
 @dataclass
 class VarInfo:
     name: str
-    type: TypeLike
+    type: "TypeLike"
     is_const: bool
     token: object
-    offset: Optional[int] = None
-    memory_address: Optional[str] = None  # Dirección de memoria para código assembler
-    is_global: bool = False  # Si es variable global
-    is_parameter: bool = False  # Si es parámetro de función
-    is_temporary: bool = False  # Si es variable temporal
+    offset: Optional[int] = None            # layout lógico que calculas en semántica
+    memory_address: Optional[str] = None    # para globals (assembler)
+    is_global: bool = False
+    is_parameter: bool = False
+    is_temporary: bool = False
+    level: int = 0                          # nivel léxico (0 = global)
+    frame_offset: Optional[int] = None      # desplazamie
 
 class ScopeStack:
+
     def __init__(self) -> None:
         self.stack: list[dict[str, VarInfo]] = [ {} ]
+        self.level: int = 0                 # 0 = global
 
     def push(self) -> None:
         self.stack.append({})
+        self.level += 1
 
     def pop(self) -> None:
         self.stack.pop()
+        self.level -= 1
 
     def declare(self, name: str, info: VarInfo) -> bool:
         curr = self.stack[-1]
         if name in curr:
             return False
+        info.level = self.level             # anotar nivel léxico actual
         curr[name] = info
         return True
 

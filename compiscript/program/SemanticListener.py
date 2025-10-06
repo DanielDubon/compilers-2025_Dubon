@@ -14,22 +14,19 @@ from typing import Optional, Tuple, Dict, List
 import sys
 
 class SemanticListener(CompiscriptListener):
-   
-
     def __init__(self, source_lines):
         self.symbtab = SymbolTable()
-        self.scopes = ScopeStack()
-        self.offset_stack: list[int] = [0] # Global scope offset
+        self.scopes = self.symbtab.scopes
         self.errors = []
         self.source_lines = source_lines
         self.types: dict[object, TypeLike] = {}
         self.funcs: Dict[tuple[Optional[str], str], tuple[list[TypeLike], TypeLike]] = {}
-        self.loop_depth = 0            
-        self.func_ret_stack: list[TypeLike] = []  
+        self.loop_depth = 0
+        self.func_ret_stack: list[TypeLike] = []
         self.switch_depth = 0
         self.block_term_stack = []
         self.class_stack: list[str] = []
-        self.class_fields: dict[str, dict[str, TypeLike]] = {} 
+        self.class_fields: dict[str, dict[str, TypeLike]] = {}
         self.class_extends: dict[str, Optional[str]] = {}
         self.returns: dict[object, bool] = {}
         self._switch_expr_nodes: list[object] = []
@@ -37,6 +34,7 @@ class SemanticListener(CompiscriptListener):
         self.func_key_stack: list[tuple[Optional[str], str]] = []
         self.func_locals: Dict[tuple[Optional[str], str], set[str]] = {}
         self.func_captures: Dict[tuple[Optional[str], str], set[str]] = {}
+
 
     def _get_type_size(self, var_type: TypeLike) -> int:
         if isinstance(var_type, Type):
@@ -81,7 +79,6 @@ class SemanticListener(CompiscriptListener):
     def enterBlock(self, ctx):
         # Abre un nuevo ambito
         self.scopes.push()
-        self.offset_stack.append(0)
         self.block_term_stack.append(False)
 
        
@@ -124,13 +121,11 @@ class SemanticListener(CompiscriptListener):
 
     def exitBlock(self, ctx):
         self.scopes.pop()
-        self.offset_stack.pop()
         self.block_term_stack.pop()
         always_returns = False
         for st in (ctx.statement() or []):
-            if not always_returns:
-                if self._ret(st):
-                    always_returns = True
+            if not always_returns and self._ret(st):
+                always_returns = True
         self._set_returns(ctx, always_returns)
         
     def _mark_terminator(self):
@@ -148,11 +143,9 @@ class SemanticListener(CompiscriptListener):
         id_tok = ctx.Identifier().getSymbol()
         name = id_tok.text
 
+        # Campos de clase fuera de métodos
         if self.class_stack and not self.func_ret_stack:
-            annotated = None
-            if ctx.typeAnnotation():
-                annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
-
+            annotated = self._type_from_annotation(ctx.typeAnnotation().type_()) if ctx.typeAnnotation() else None
             rhs_node = None
             if hasattr(ctx, "expression"):
                 try:
@@ -164,18 +157,15 @@ class SemanticListener(CompiscriptListener):
                         rhs_node = None
             if rhs_node is None and hasattr(ctx, "initializer") and ctx.initializer():
                 rhs_node = ctx.initializer().expression()
-
             if rhs_node is None:
                 self._err(ctx, f"La constante de clase '{name}' debe inicializarse.")
                 return
-
             rhs_t = self.t(rhs_node)
             if annotated is not None and not self._is_assignable(annotated, rhs_t):
                 self._err(ctx, f"Tipo incompatible en inicializacion de const de clase '{name}': {annotated} vs {rhs_t}")
                 typ = annotated
             else:
                 typ = annotated if annotated is not None else rhs_t
-
             cname = self.class_stack[-1]
             fields = self.class_fields.setdefault(cname, {})
             if name in fields:
@@ -184,61 +174,47 @@ class SemanticListener(CompiscriptListener):
                 fields[name] = typ
                 self._set_returns(ctx, False)
             return
-        
-        annotated = None
-        if ctx.typeAnnotation():
-            annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
 
-        
+        # Variables top-level / locales
+        annotated = self._type_from_annotation(ctx.typeAnnotation().type_()) if ctx.typeAnnotation() else None
+
         rhs_node = None
-        
         if hasattr(ctx, "expression"):
             try:
                 rhs_node = ctx.expression()
             except TypeError:
-               
                 try:
                     rhs_node = ctx.expression(0)
                 except Exception:
                     rhs_node = None
-        
         if rhs_node is None and hasattr(ctx, "initializer") and ctx.initializer():
             rhs_node = ctx.initializer().expression()
 
         if rhs_node is None:
-            self._err(ctx, "La constante '{}' debe inicializarse.".format(name))
+            self._err(ctx, f"La constante '{name}' debe inicializarse.")
             return
 
         rhs_t = self.t(rhs_node)
-
-       
         if annotated is not None and not self._is_assignable(annotated, rhs_t):
-            self._err(
-                ctx,
-                "Tipo incompatible en inicializacion de const '{}': se esperaba {}, se obtuvo {}."
-                .format(name, annotated, rhs_t)
-            )
+            self._err(ctx, f"Tipo incompatible en inicializacion de const '{name}': se esperaba {annotated}, se obtuvo {rhs_t}.")
             typ = annotated
         else:
             typ = annotated if annotated is not None else rhs_t
 
-        # Calculate offset
-        current_offset = self.offset_stack[-1]
-        var_size = self._get_type_size(typ)
-        
-        # Create VarInfo with offset
-        var_info = VarInfo(name, typ, True, id_tok, offset=current_offset)
+        var_info = VarInfo(name, typ, True, id_tok)  # sin offset manual
 
         ok = self.scopes.declare(name, var_info)
         if not ok:
-            self._err(ctx, "Redeclaracion de '{}' en el mismo ambito.".format(name))
+            self._err(ctx, f"Redeclaracion de '{name}' en el mismo ambito.")
         else:
-            self.offset_stack[-1] += var_size # Increment offset
             if self.func_key_stack:
+                # Local de función
+                self.symbtab.allocate_local(var_info)
                 self.func_locals[self.func_key_stack[-1]].add(name)
+            else:
+                # Global
+                self.symbtab.declare_var(name, var_info)
         self._set_returns(ctx, False)
-        if ok and not self.class_stack:  # solo si no es campo de clase
-            self.symbtab.declare_var(name, var_info)
 
     def exitPrintStatement(self, ctx):
         
@@ -253,18 +229,12 @@ class SemanticListener(CompiscriptListener):
         name = id_tok.text
 
         if self.class_stack and not self.func_ret_stack:
-            annotated = None
-            if ctx.typeAnnotation():
-                annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
+            annotated = self._type_from_annotation(ctx.typeAnnotation().type_()) if ctx.typeAnnotation() else None
+            init_t = self.t(ctx.initializer().expression()) if ctx.initializer() else None
+            var_t = init_t if (annotated is None and init_t is not None) else (annotated if annotated is not None else UNKNOWN)
 
-            init_t = None
-            if ctx.initializer():
-                init_t = self.t(ctx.initializer().expression())
-
-            if annotated is None and init_t is not None:
-                var_t = init_t
-            else:
-                var_t = annotated if annotated is not None else UNKNOWN
+            if annotated is not None and init_t is not None and not self._is_assignable(annotated, init_t):
+                self._err(ctx, f"Tipo incompatible en inicializacion de variable '{name}': se esperaba {annotated}, se obtuvo {init_t}")
 
             cname = self.class_stack[-1]
             fields = self.class_fields.setdefault(cname, {})
@@ -275,44 +245,32 @@ class SemanticListener(CompiscriptListener):
                 self._set_returns(ctx, False)
             return
 
-        
-        annotated = None
-        if ctx.typeAnnotation():
-            annotated = self._type_from_annotation(ctx.typeAnnotation().type_())
+        # --- Variables top-level o locales de función ---
+        annotated = self._type_from_annotation(ctx.typeAnnotation().type_()) if ctx.typeAnnotation() else None
+        init_t = self.t(ctx.initializer().expression()) if ctx.initializer() else None
+        var_t = init_t if (annotated is None and init_t is not None) else (annotated if annotated is not None else UNKNOWN)
 
-        init_t = None
-        if ctx.initializer():
-            init_t = self.t(ctx.initializer().expression())
+        if annotated is not None and init_t is not None and not self._is_assignable(annotated, init_t):
+            self._err(ctx, f"Tipo incompatible en inicializacion de variable '{name}': se esperaba {annotated}, se obtuvo {init_t}")
 
-       
-        if annotated is None and init_t is not None:
-            var_t = init_t
-        else:
-            var_t = annotated if annotated is not None else UNKNOWN
-
-      
-        if annotated is not None and init_t is not None:
-            if not self._is_assignable(annotated, init_t):
-                self._err(ctx, "Tipo incompatible en inicializacion de variable '{}': se esperaba {}, se obtuvo {}"
-                          .format(name, annotated, init_t))
-
-        # Calculate offset
-        current_offset = self.offset_stack[-1]
-        var_size = self._get_type_size(var_t) # Use var_t, which is the inferred/annotated type
-
-        # Create VarInfo with offset
-        var_info = VarInfo(name, var_t, False, id_tok, offset=current_offset)
+        var_info = VarInfo(name, var_t, False, id_tok)  # sin offset manual
 
         ok = self.scopes.declare(name, var_info)
         if not ok:
-            self._err(ctx, "Redeclaracion de '{}' en el mismo ambito.".format(name))
+            self._err(ctx, f"Redeclaracion de '{name}' en el mismo ambito.")
         else:
-            self.offset_stack[-1] += var_size # Increment offset
-            if self.func_key_stack:
-                self.func_locals[self.func_key_stack[-1]].add(name)
+            if self.symbtab.current_function is not None:
+                # Local de función: asigna offset relativo a FP
+                self.symbtab.allocate_local(var_info)
+                if self.func_key_stack:
+                    self.func_locals[self.func_key_stack[-1]].add(name)
+            else:
+                # Global: solo se declara; la dirección se asigna al final
+                self.symbtab.declare_var(name, var_info)
+
         self._set_returns(ctx, False)
-        if ok and not self.class_stack:
-            self.symbtab.declare_var(name, var_info)
+
+
 
     # ---------- Asignaciones ----------------
 
@@ -923,14 +881,13 @@ class SemanticListener(CompiscriptListener):
         cond_t = self.t(expr_ctx)
         if not is_boolean(cond_t):
             self._err(expr_ctx, f"La condicion de {where} debe ser boolean.")
-            
+
     def enterFunctionDeclaration(self, ctx):
         fname = ctx.Identifier().getText()
         params_nodes = ctx.parameters().parameter() if ctx.parameters() else []
         param_types = [(self._type_from_annotation(p.type_()) if p.type_() else UNKNOWN) for p in params_nodes]
         ret_t = self._type_from_annotation(ctx.type_()) if ctx.type_() else UNKNOWN
 
-        
         if fname == "constructor":
             if ctx.type_():
                 pass
@@ -944,11 +901,11 @@ class SemanticListener(CompiscriptListener):
         self.func_key_stack.append(key)
         self.func_locals.setdefault(key, set())
         self.func_captures.setdefault(key, set())
-        
+
         if key in self.funcs:
             self._err(ctx, f"Funcion '{fname}' redeclarada.")
         else:
-            
+            # Validaciones de override (igual que ya tienes)
             if current_class is not None and fname != "constructor":
                 anc_sig = self._find_method_sig_in_ancestors(current_class, fname)
                 if anc_sig is not None:
@@ -964,50 +921,26 @@ class SemanticListener(CompiscriptListener):
                             f"se definio {self._sig_to_str(param_types, ret_t)}."
                         )
 
-            
-            self.funcs[key] = (param_types, ret_t)
+            # Construye VarInfo de params (sin offsets manuales)
             params_infos = []
             for p, ptype in zip(params_nodes, param_types):
                 id_tok = p.Identifier().getSymbol()
                 pname = id_tok.text
                 params_infos.append(VarInfo(pname, ptype, False, id_tok))
+                # marca para captura
+                self.func_locals[key].add(pname)
 
+            # Declara función UNA sola vez
             f_info = FunctionInfo(fname, params_infos, ret_t,
                                   is_method=(self.class_stack != []),
                                   is_constructor=(fname == "constructor"))
             self.symbtab.declare_func(f_info)
 
-        self.scopes.push()
-        self.offset_stack.append(0) # Nuevo registro de activacion
-
-        # Parameters are part of the function's local scope and get offsets
-        params_infos_with_offsets = [] # New list to store VarInfo with offsets
-        for p, ptype in zip(params_nodes, param_types):
-            id_tok = p.Identifier().getSymbol()
-            pname = id_tok.text
-
-            # Calculate offset for parameter
-            current_offset = self.offset_stack[-1]
-            param_size = self._get_type_size(ptype)
-            
-            param_var_info = VarInfo(pname, ptype, False, id_tok, offset=current_offset)
-            params_infos_with_offsets.append(param_var_info) # Add to the list for FunctionInfo
-
-            ok = self.scopes.declare(pname, param_var_info) # Declare with offset
-            if not ok:
-                self._err(p, f"Parametro '{pname}' redeclarado en la misma funcion.")
-            else:
-                self.offset_stack[-1] += param_size # Increment offset for next variable
-
-            self.func_locals[key].add(pname)
-
-        # Now create f_info with parameters that have offsets
-        f_info = FunctionInfo(fname, params_infos_with_offsets, ret_t,
-                              is_method=(self.class_stack != []),
-                              is_constructor=(fname == "constructor"))
-        self.symbtab.declare_func(f_info)
+            self.symbtab.enter_function(fname)
+            self.funcs[key] = ([p.type for p in params_infos], ret_t)
 
         self.func_ret_stack.append(ret_t)
+
 
 
                 
@@ -1031,12 +964,17 @@ class SemanticListener(CompiscriptListener):
         if expected != VOID and expected != UNKNOWN:
             fun_block = ctx.block()
             if not self._ret(fun_block):
-                self._err(ctx, f"La funcion '{ctx.Identifier().getText()}' "
-                            f"debe retornar {expected} en todos los caminos.")
+                self._err(ctx, f"La funcion '{ctx.Identifier().getText()}' debe retornar {expected} en todos los caminos.")
+
         self.func_key_stack.pop()
-        self.scopes.pop()
-        self.offset_stack.pop()
+
+        # Cierra function frame y scope
+        self.symbtab.leave_function()
+
+
+
         self.func_ret_stack.pop()
+
 
     
     def exitReturnStatement(self, ctx):

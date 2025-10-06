@@ -97,6 +97,10 @@ def compile_code():
         print(dump_ast_to_str(ast))
         print("--------------------\n")
 
+        semantic_listener.symbtab.assign_memory_addresses()  # solo globales (scope 0)
+        semantic_listener.symbtab.assign_function_labels()
+        print(semantic_listener.symbtab.dump())
+
         # 4. Generación de TAC
         tac_generator = TACGenerator(semantic_listener.symbtab)
         tac_code = tac_generator.generate(ast)
