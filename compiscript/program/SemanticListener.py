@@ -93,29 +93,20 @@ class SemanticListener(CompiscriptListener):
             id_tok = parent.Identifier().getSymbol()
             vname = id_tok.text
             seq_expr = parent.expression()
-            # por si expression() devuelve lista
             if isinstance(seq_expr, list):
                 seq_expr = seq_expr[0] if seq_expr else None
             seq_t = self.t(seq_expr) if seq_expr is not None else UNKNOWN
-            if isinstance(seq_t, ArrayType):
-                elem_t = seq_t.elem
-            else:
-                elem_t = UNKNOWN
+            elem_t = seq_t.elem if isinstance(seq_t, ArrayType) else UNKNOWN
+            if not isinstance(seq_t, ArrayType):
                 self._err(parent, "La expresion de 'foreach' debe ser un arreglo.")
-            self.scopes.declare(vname, VarInfo(vname, elem_t, False, id_tok))
+        
+            vinfo = VarInfo(vname, elem_t, False, id_tok)
+            self.scopes.declare(vname, vinfo)
+        
+            if self.func_key_stack:
+                self.symbtab.allocate_local(vinfo)
+                self.func_locals[self.func_key_stack[-1]].add(vname)
 
-       
-        elif pname == "TryCatchStatementContext":
-            blocks = parent.block()
-            # normaliza a lista
-            if not isinstance(blocks, list):
-                blocks = [blocks]
-          
-            if len(blocks) >= 2 and ctx is blocks[1]:
-                id_tok = parent.Identifier().getSymbol()
-                ename = id_tok.text
-                
-                self.scopes.declare(ename, VarInfo(ename, STR, False, id_tok))
 
 
 

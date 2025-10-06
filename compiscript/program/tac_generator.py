@@ -515,18 +515,22 @@ class TACGenerator:
         return temp_target
 
     def visitArrayLiteral(self, ctx: ArrayLiteral):
-        # Crear array temporal
+        # Crear arreglo temporal
         arr_temp = self.new_temp()
         self.code.append(TAC_Assign(target=arr_temp, source="[]"))
-        
-        # Agregar elementos
-        for elem in ctx.elems:
-            elem_addr = self.visit(elem)
-            if elem_addr is None:
-                elem_addr = "0"
-            self.code.append(BinaryOp(target=arr_temp, left=arr_temp, op="append", right=elem_addr))
-        
+
+
+        elems = getattr(ctx, "elems", [])
+        for item in elems:
+            node = item[0] if isinstance(item, list) and item else item  # <-- normaliza
+            val = self.visit(node)
+            if val is None:
+                val = "0"
+            # Emite append
+            self.code.append(BinaryOp(target=arr_temp, left=arr_temp, op="append", right=val))
+
         return arr_temp
+
 
     def visitLiteralFloat(self, ctx: LiteralFloat):
         return ctx.value
