@@ -5,10 +5,8 @@ return t0
 EndFunc
 main:
 BeginFunc
-r = 0
 param 2
 param 3
 t1 = call sum, 2
-r = t1
-return r
+return t1
 EndFunc

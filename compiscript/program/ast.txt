@@ -1,44 +1,69 @@
 Program
   .decls:
-    VarDecl
-      name=a
-      .type:
+    FunctionDecl
+      name=sum
+      .params:
+        Param
+          name=a
+          .type:
+            SimpleType
+              name=integer
+        Param
+          name=b
+          .type:
+            SimpleType
+              name=integer
+      .ret:
         SimpleType
           name=integer
-      .init:
-        Binary
-          op=+
-          .left:
-            LiteralInt
-              value=2
-          .right:
-            Binary
-              op=*
-              .left:
-                LiteralInt
-                  value=3
-              .right:
-                LiteralInt
-                  value=4
-      kind=let
-    VarDecl
-      name=b
-      .type:
+      .body:
+        Block
+          .stmts:
+            Return
+              .expr:
+                Binary
+                  op=+
+                  .left:
+                    Name
+                      name=a
+                  .right:
+                    Name
+                      name=b
+      is_method=False
+      is_constructor=False
+    FunctionDecl
+      name=main
+      .params:
+      .ret:
         SimpleType
           name=integer
-      .init:
-        Binary
-          op=-
-          .left:
-            LiteralInt
-              value=10
-          .right:
-            Binary
-              op=/
-              .left:
+      .body:
+        Block
+          .stmts:
+            VarDecl
+              name=r
+              .type:
+                SimpleType
+                  name=integer
+              .init:
+                LiteralInt
+                  value=0
+              kind=let
+            Assign
+              .target:
                 Name
-                  name=a
-              .right:
-                LiteralInt
-                  value=2
-      kind=let
+                  name=r
+              .value:
+                Call
+                  .callee:
+                    Name
+                      name=sum
+                  .args:
+                    [LiteralInt(line=8, col=10, value=2)]
+                    [LiteralInt(line=8, col=13, value=3)]
+            Return
+              .expr:
+                Name
+                  name=r
+      is_method=False
+      is_constructor=False

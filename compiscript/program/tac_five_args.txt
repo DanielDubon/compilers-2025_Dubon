@@ -1,0 +1,18 @@
+foo:
+BeginFunc
+t0 = a + b
+t1 = t0 + c
+t2 = t1 + d
+t3 = t2 + e
+return t3
+EndFunc
+main:
+BeginFunc
+param 1
+param 2
+param 3
+param 4
+param 5
+t4 = call foo, 5
+return t4
+EndFunc

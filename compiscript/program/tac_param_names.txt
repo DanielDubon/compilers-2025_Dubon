@@ -1,0 +1,12 @@
+bar:
+BeginFunc
+t0 = x + y
+return t0
+EndFunc
+main:
+BeginFunc
+param 7
+param 8
+t1 = call bar, 2
+return t1
+EndFunc
