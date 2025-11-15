@@ -241,6 +241,8 @@ class TACGenerator:
             if arg_addr is None:
                 arg_addr = "0"  # Valor por defecto
             arg_addrs.append(arg_addr)
+
+        for arg_addr in arg_addrs:
             self.code.append(Param(value=arg_addr))
         
         # Las llamadas a función pueden devolver un valor, así que generamos un temporal para él

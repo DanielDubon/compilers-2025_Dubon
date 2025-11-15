@@ -1,34 +1,52 @@
 # auto-generated MIPS from tac
+.data
+newline: .asciiz "\n"
+
 .text
 .globl main
+main:
+  addiu $sp, $sp, -256
+  sw $ra, 252($sp)
+  jal user_main
+  lw $ra, 252($sp)
+  addiu $sp, $sp, 256
+  li $v0, 10
+  syscall
 
-# --- function sum ---
-sum:
-  addi $sp, $sp, -32
-  sw   $ra, 28($sp)
-  sw   $fp, 24($sp)
-  move $fp, $sp
-  add  $t0, $a0, $a1
-  move $v0, $t0
-  lw   $fp, 24($sp)
-  lw   $ra, 28($sp)
-  addi $sp, $sp, 32
-  jr   $ra
 
-  addi $sp, $sp, -36
-  sw   $ra, 32($sp)
-  sw   $fp, 28($sp)
-  move $fp, $sp
-  sw   $s0, 24($sp)
-  li   $s0, 0
-  li   $a0, 2
-  li   $a1, 3
-  jal  sum
+# --- function user_main ---
+user_main:
+  addiu $sp, $sp, -12
+  sw $ra, 8($sp)
+  sw $s0, 4($sp)
+  li $s0, 0
+L0:
+  move $t8, $s0
+  li $t9, 5
+  slt $t8, $t8, $t9
+  move $t0, $t8
+  beq $t0, $zero, L1
+  move $a0, $s0
+  jal print
   move $t1, $v0
+  move $t8, $s0
+  li $t9, 1
+  add $t8, $t8, $t9
+  move $t1, $t8
   move $s0, $t1
-  move $v0, $s0
-  lw   $s0, 24($sp)
-  lw   $fp, 28($sp)
-  lw   $ra, 32($sp)
-  addi $sp, $sp, 36
-  jr   $ra
+  j L0
+L1:
+.epilogue_user_main:
+  lw $s0, 4($sp)
+  lw $ra, 8($sp)
+  addiu $sp, $sp, 12
+  jr $ra
+
+# --- Runtime Helpers ---
+print:
+  li $v0, 1      # syscall for print_int
+  syscall
+  li $v0, 4      # syscall for print_string
+  la $a0, newline
+  syscall
+  jr $ra

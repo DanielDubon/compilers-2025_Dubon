@@ -1,14 +1,13 @@
-sum:
+user_main:
 BeginFunc
-t0 = a + b
-return t0
-EndFunc
-main:
-BeginFunc
-r = 0
-param 2
-param 3
-t1 = call sum, 2
-r = t1
-return r
+i = 0
+L0:
+t0 = i < 5
+if_false t0 goto L1
+param i
+t1 = call print, 1
+t1 = i + 1
+i = t1
+goto L0
+L1:
 EndFunc

@@ -1,47 +1,14 @@
 Program
   .decls:
     FunctionDecl
-      name=sum
+      name=user_main
       .params:
-        Param
-          name=a
-          .type:
-            SimpleType
-              name=integer
-        Param
-          name=b
-          .type:
-            SimpleType
-              name=integer
-      .ret:
-        SimpleType
-          name=integer
-      .body:
-        Block
-          .stmts:
-            Return
-              .expr:
-                Binary
-                  op=+
-                  .left:
-                    Name
-                      name=a
-                  .right:
-                    Name
-                      name=b
-      is_method=False
-      is_constructor=False
-    FunctionDecl
-      name=main
-      .params:
-      .ret:
-        SimpleType
-          name=integer
+      ret=None
       .body:
         Block
           .stmts:
             VarDecl
-              name=r
+              name=i
               .type:
                 SimpleType
                   name=integer
@@ -49,21 +16,39 @@ Program
                 LiteralInt
                   value=0
               kind=let
-            Assign
-              .target:
-                Name
-                  name=r
-              .value:
-                Call
-                  .callee:
+            While
+              .cond:
+                Binary
+                  op=<
+                  .left:
                     Name
-                      name=sum
-                  .args:
-                    [LiteralInt(line=8, col=10, value=2)]
-                    [LiteralInt(line=8, col=13, value=3)]
-            Return
-              .expr:
-                Name
-                  name=r
+                      name=i
+                  .right:
+                    LiteralInt
+                      value=5
+              .body:
+                Block
+                  .stmts:
+                    ExprStmt
+                      .expr:
+                        Call
+                          .callee:
+                            Name
+                              name=print
+                          .args:
+                            [Name(line=4, col=14, name='i')]
+                    Assign
+                      .target:
+                        Name
+                          name=i
+                      .value:
+                        Binary
+                          op=+
+                          .left:
+                            Name
+                              name=i
+                          .right:
+                            LiteralInt
+                              value=1
       is_method=False
       is_constructor=False

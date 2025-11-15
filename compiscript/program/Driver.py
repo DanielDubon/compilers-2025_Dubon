@@ -177,9 +177,6 @@ def main(argv):
             mips_asm = mips_gen.translate()
             mips_path = os.path.join(script_dir, "out.s")
             with open(mips_path, "w", encoding="utf-8") as f:
-                f.write("# auto-generated MIPS from tac\n")
-                f.write(".text\n")
-                f.write(".globl main\n")
                 f.write(mips_asm)
                 f.write("\n")
             print(f"MIPS guardado en: {mips_path}")
@@ -203,9 +200,6 @@ def main(argv):
         mips_asm = mips_gen.translate()
         mips_path = os.path.join(script_dir, "out.s")
         with open(mips_path, "w", encoding="utf-8") as f:
-            f.write("# auto-generated MIPS from tac\n")
-            f.write(".text\n")
-            f.write(".globl main\n")
             f.write(mips_asm)
             f.write("\n")
         print(f"MIPS guardado en: {mips_path}")
