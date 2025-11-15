@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Compiscript - Mini IDE</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#0f1720; color:#e6eef6; margin:0; padding:16px; }
+    .container { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 420px; gap:12px; }
+    textarea { width:100%; height:520px; font-family:monospace; font-size:13px; background:#071027; color:#dbeaf7; border:1px solid #213445; padding:10px; }
+    .panel { background:#071025; border:1px solid #213445; padding:10px; height:520px; overflow:auto; }
+    button { padding:8px 12px; background:#1e90ff; border:none; color:white; cursor:pointer; margin-right:6px; }
+    select { padding:6px; background:#0b2540; color:#dbeaf7; border:1px solid #213445; }
+    pre { background:#061526; padding:10px; border-radius:4px; color:#cfeffd; white-space:pre-wrap; word-break:break-word; }
+    .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+    h3 { margin:6px 0; font-size:14px; color:#bfe6ff; }
+  </style>
+</head>
+<body>
+  <h1>Compiscript - Mini IDE</h1>
+  <p>Escribe código y pulsa "Compilar". El servidor debe estar en <code>http://localhost:5000</code> y exponer <code>/ide/compile</code>.</p>
+
+  <div class="container">
+    <div>
+      <div class="row">
+        <button id="btnCompile">▶️ Compilar</button>
+        <button id="btnFormat">📝 Formatear</button>
+        <select id="selFormat">
+          <option value="all">Todo (TAC + MIPS)</option>
+          <option value="tac">TAC</option>
+          <option value="mips">MIPS</option>
+          <option value="ast">AST</option>
+        </select>
+        <button id="btnClear">🗑️ Limpiar</button>
+      </div>
+
+      <textarea id="code" spellcheck="false">
+// Ejemplo
+function sum(a: integer, b: integer): integer {
+  return a + b;
+}
+let r: integer = sum(2,3);
+      </textarea>
+    </div>
+
+    <div class="panel">
+      <h3>Salida / Errores</h3>
+      <div style="margin-bottom:6px;">
+        <strong>Stdout:</strong>
+        <pre id="outStd">—</pre>
+      </div>
+      <div style="margin-bottom:6px;">
+        <strong>Stderr / Errores:</strong>
+        <pre id="outErr">—</pre>
+      </div>
+      <div style="margin-bottom:6px;">
+        <strong>TAC:</strong>
+        <pre id="outTac">—</pre>
+      </div>
+      <div style="margin-bottom:6px;">
+        <strong>MIPS:</strong>
+        <pre id="outMips">—</pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+const btnCompile = document.getElementById('btnCompile');
+const btnFormat = document.getElementById('btnFormat');
+const btnClear = document.getElementById('btnClear');
+const selFormat = document.getElementById('selFormat');
+const codeEl = document.getElementById('code');
+const outStd = document.getElementById('outStd');
+const outErr = document.getElementById('outErr');
+const outTac = document.getElementById('outTac');
+const outMips = document.getElementById('outMips');
+
+async function postCompile() {
+  btnCompile.disabled = true;
+  btnCompile.textContent = '⏳ Compilando...';
+  outStd.textContent = outErr.textContent = outTac.textContent = outMips.textContent = '...';
+  try {
+    const resp = await fetch('/ide/compile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: codeEl.value, format: selFormat.value })
+    });
+    const data = await resp.json();
+    outStd.textContent = data.stdout || '—';
+    outErr.textContent = (data.errors && data.errors.length) ? data.errors.join('\\n') : (data.stderr || '—');
+    outTac.textContent = data.tac || '—';
+    outMips.textContent = data.mips || '—';
+  } catch (err) {
+    outErr.textContent = 'Error de conexión: ' + err.message;
+  } finally {
+    btnCompile.disabled = false;
+    btnCompile.textContent = '▶️ Compilar';
+  }
+}
+
+btnCompile.addEventListener('click', postCompile);
+
+btnFormat.addEventListener('click', async () => {
+  try {
+    const resp = await fetch('/format-code', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code: codeEl.value })});
+    const data = await resp.json();
+    if (data.success) codeEl.value = data.formatted_code;
+  } catch(e) { console.warn(e); }
+});
+
+btnClear.addEventListener('click', () => {
+  if (confirm('Limpiar editor?')) codeEl.value = '';
+});
+</script>
+</body>
+</html>

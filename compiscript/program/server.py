@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from pathlib import Path
+import subprocess, re, traceback, time
 import sys
 from io import StringIO
 from antlr4 import InputStream, CommonTokenStream, ParseTreeWalker
@@ -11,9 +13,14 @@ from ast_builder import AstBuilder
 from tac_generator import TACGenerator
 from dataclasses import is_dataclass, fields # Necesario para dump_ast_to_str
 from treeutils import tree_to_pretty_text # Importar para depurar el parse tree
+from mips_generator import MIPSGen
 
-app = Flask(__name__)
-CORS(app)
+PROG_DIR = Path(__file__).resolve().parent
+FRONTEND_PUBLIC = PROG_DIR / "my-ide-app" / "public"
+FRONTEND_STATIC = FRONTEND_PUBLIC / "static"
+
+app = Flask(__name__, static_folder=str(FRONTEND_PUBLIC), static_url_path='/ide/static')
+CORS(app)  # permitir llamadas desde el IDE en dev
 
 def dump_ast_to_str(node, indent=0):
     pad = "  " * indent
@@ -122,5 +129,150 @@ def compile_code():
 
     return jsonify({'output': output_tac, 'errors': compiler_errors})
 
+def compile_code(source_code: str, output_format: str = "all"):
+    """
+    Compila el código fuente usando Driver.py en el directorio PROG_DIR.
+    Retorna un objeto con atributos: success, tac, mips, ast, stdout, stderr, errors, warnings, compilation_time
+    """
+    class Result:
+        success = False
+        tac = ""
+        mips = ""
+        ast = ""
+        stdout = ""
+        stderr = ""
+        errors = []
+        warnings = []
+        compilation_time = 0.0
+
+    res = Result()
+    import time
+    start = time.time()
+
+    try:
+        # escribir archivo temporal
+        tmp_file = PROG_DIR / "tmp_compile.cps"
+        tmp_file.write_text(source_code)
+
+        # verificar Driver.py
+        if not (PROG_DIR / "Driver.py").exists():
+            res.stderr = f"Driver.py not found at {PROG_DIR / 'Driver.py'}"
+            res.errors = [res.stderr]
+            return res
+
+        # construir comando usando el mismo intérprete de Python
+        cmd = [sys.executable, str(PROG_DIR / "Driver.py"), tmp_file.name]
+        # agregar flags según formato pedido
+        if output_format in ("all", "tac"):
+            cmd.append("--tac")
+        if output_format in ("all", "mips"):
+            cmd.append("--mips")
+        if output_format in ("all", "ast"):
+            cmd.append("--ast")
+
+        print("[server] Running:", " ".join(cmd))
+        cp = subprocess.run(cmd, cwd=str(PROG_DIR), capture_output=True, text=True, timeout=60)
+
+        res.stdout = cp.stdout or ""
+        res.stderr = cp.stderr or ""
+
+        # leer archivos de salida si existen
+        tac_file = PROG_DIR / "tac.txt"
+        if tac_file.exists():
+            res.tac = tac_file.read_text()
+
+        mips_file = PROG_DIR / "out.s"
+        if mips_file.exists():
+            res.mips = mips_file.read_text()
+
+        ast_file = PROG_DIR / "ast.txt"
+        if ast_file.exists():
+            res.ast = ast_file.read_text()
+
+        res.success = (cp.returncode == 0)
+        if not res.success and not res.errors:
+            # intentar extraer mensaje útil
+            err_msg = res.stderr.strip() or res.stdout.strip() or f"Driver exited with code {cp.returncode}"
+            res.errors = [err_msg]
+
+    except subprocess.TimeoutExpired:
+        res.stderr = "Compilación excedió el tiempo límite"
+        res.errors = [res.stderr]
+    except Exception as e:
+        import traceback
+        res.stderr = traceback.format_exc()
+        res.errors = [str(e)]
+
+    finally:
+        res.compilation_time = time.time() - start
+
+    return res
+
+def _normalize_result(result):
+    """Normaliza el objeto de resultado para devolver un dict consistente."""
+    # Si ya es dict, devolver con claves esperadas
+    if isinstance(result, dict):
+        return {
+            "success": result.get("success", False),
+            "tac": result.get("tac", "") or "",
+            "mips": result.get("mips", "") or "",
+            "ast": result.get("ast", "") or "",
+            "stdout": result.get("stdout", "") or "",
+            "stderr": result.get("stderr", "") or "",
+            "errors": result.get("errors", []) or [],
+            "warnings": result.get("warnings", []) or [],
+            "compilation_time": float(result.get("compilation_time", 0) or 0)
+        }
+    # Si es el objeto CompilationResult u otro con atributos
+    return {
+        "success": getattr(result, "success", False),
+        "tac": getattr(result, "tac", "") or "",
+        "mips": getattr(result, "mips", "") or "",
+        "ast": getattr(result, "ast", "") or "",
+        "stdout": getattr(result, "stdout", "") or "",
+        "stderr": getattr(result, "stderr", "") or "",
+        "errors": getattr(result, "errors", []) or [],
+        "warnings": getattr(result, "warnings", []) or [],
+        "compilation_time": float(getattr(result, "compilation_time", 0) or 0)
+    }
+
+@app.route('/ide/compile', methods=['POST', 'GET'])
+def ide_compile():
+    """POST: compila; GET: sirve el IDE (index.html)"""
+    if request.method == 'GET':
+        # servir index (mantén tu lógica existente)
+        static_index = FRONTEND_STATIC / "index.html"
+        public_index = FRONTEND_PUBLIC / "index.html"
+        if static_index.exists():
+            return send_from_directory(str(FRONTEND_STATIC), "index.html")
+        if public_index.exists():
+            return send_from_directory(str(FRONTEND_PUBLIC), "index.html")
+        return ("IDE static not found. Coloca index.html en my-ide-app/public o my-ide-app/public/static", 404)
+
+    # POST -> compilación
+    try:
+        data = request.get_json() or {}
+        code = data.get('code', '')
+        fmt = data.get('format', 'all')
+        if not code:
+            return jsonify({"success": False, "errors": ["No se recibió 'code' en el body"]}), 400
+
+        raw = compile_code(code, fmt)
+        resp = _normalize_result(raw)
+        return jsonify(resp)
+    except Exception as e:
+        return jsonify({"success": False, "errors": [str(e)], "stderr": traceback.format_exc()}), 500
+
+# servir recursos estáticos bajo /ide/static/...
+@app.route('/ide/static/<path:filename>')
+def serve_ide_static(filename):
+    f1 = FRONTEND_STATIC / filename
+    f2 = FRONTEND_PUBLIC / filename
+    if f1.exists():
+        return send_from_directory(str(FRONTEND_STATIC), filename)
+    if f2.exists():
+        return send_from_directory(str(FRONTEND_PUBLIC), filename)
+    return ("Not found", 404)
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
