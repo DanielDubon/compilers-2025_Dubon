@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Build artifacts
+*.o
+*.so
+*.a
+*.out
+
+# Generated files
+out.s
+tac.txt
+parse_tree.txt
+parse_tree.dot
+parse_tree.png
+ast.txt
+ast.dot
+ast.png
+*.cps
+*.interp
+*.tokens
+*Lexer.py
+*Parser.py
+*Listener.py
+*Visitor.py
+
+# IDE
+.vscode/
+.idea/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
