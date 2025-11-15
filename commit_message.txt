@@ -1,0 +1,24 @@
+fix(mips): Correct runtime, control flow, and code generation
+
+This commit addresses several critical bugs in the MIPS code generator, improving correctness, efficiency, and adherence to standard execution flow.
+
+Key fixes include:
+
+- Runtime `print` function:
+  - Resolves a 'Symbol not found' error by implementing a `print` runtime function for printing integers.
+  - Adds a `.data` section for required strings (e.g., newlines).
+
+- Function Epilogue Generation:
+  - Fixes a 'Symbol not found' error for epilogue labels (e.g., `.epilogue_user_main`).
+  - The epilogue is now correctly generated for all functions, regardless of whether they contain explicit `return` statements.
+
+- Program Entry Point:
+  - The MIPS `main` entry point now correctly calls the compiled user code found in `user_main` via `jal user_main`.
+
+- Code Generation Efficiency and Correctness:
+  - Improves code generation for `while` loops and assignments by reducing redundant `move` instructions.
+  - Fixes a critical bug where literal assignments (e.g., `i = 0`) were handled incorrectly, leading to invalid initialization code. The generator now correctly uses `li` for literals.
+  - Optimizes `if_false` branches to use registers more directly.
+
+- Build Process:
+  - Cleans up the build process by removing duplicate MIPS headers from the final assembly file.
