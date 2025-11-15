@@ -6,13 +6,13 @@ PROG_DIR = Path(__file__).resolve().parents[1]
 DRIVER = PROG_DIR / "Driver.py"
 TAC_TXT = PROG_DIR / "tac.txt"
 
-def run_compiler(source: str, name: str = "tmp.cps", extra_args=("--tac",)):
+def run_compiler(source: str, name: str = "tmp.cps", extra_args=("--tac", "--mips")):
  
     src_path = PROG_DIR / name
     src_path.write_text(source)
     # ejecuta el compilador
     cp = subprocess.run(
-        ["python3", str(DRIVER), str(src_path.name), *extra_args],
+        ["python", str(DRIVER), str(src_path.name), *extra_args],
         cwd=PROG_DIR,
         text=True,
         capture_output=True

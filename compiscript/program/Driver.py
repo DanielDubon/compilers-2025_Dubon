@@ -85,12 +85,13 @@ def ast_to_dot(root):
 def main(argv):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if len(argv) < 2:
-        print("Uso: python3 Driver.py <archivo.cps> [--ast-dump] [--ast-dot] [--tac]")
+        print("Uso: python3 Driver.py <archivo.cps> [--ast-dump] [--ast-dot] [--tac] [--mips]")
         return
 
     want_ast_dump = ("--ast-dump" in argv)
     want_ast_dot  = ("--ast-dot" in argv)
     want_tac = ("--tac" in argv)
+    want_mips = ("--mips" in argv)
 
     with open(argv[1], encoding="utf-8") as f:
         source_lines = f.readlines()
@@ -165,6 +166,49 @@ def main(argv):
         # Mostrar información adicional de la tabla de símbolos
         print("\n--- Información adicional para generación de código assembler ---")
         print(sem.symbtab.dump())
+        
+        # Generar MIPS si se solicita
+        if want_mips:
+            print("\nGenerando codigo MIPS...")
+            from mips_generator import MIPSGen
+            # Convert TAC objects to strings for MIPSGen
+            tac_strings = [str(t) for t in tac_code]
+            mips_gen = MIPSGen(tac_strings)
+            mips_asm = mips_gen.translate()
+            mips_path = os.path.join(script_dir, "out.s")
+            with open(mips_path, "w", encoding="utf-8") as f:
+                f.write("# auto-generated MIPS from tac\n")
+                f.write(".text\n")
+                f.write(".globl main\n")
+                f.write(mips_asm)
+                f.write("\n")
+            print(f"MIPS guardado en: {mips_path}")
+    elif want_mips:
+        # Si se pide MIPS sin TAC, generar TAC primero
+        print("Generando codigo MIPS (requiere TAC)...")
+        sem.symbtab.assign_memory_addresses()
+        sem.symbtab.assign_function_labels()
+        
+        tac_gen = TACGenerator(sem.symbtab)
+        tac_code = tac_gen.generate(ast)
+        tac_path = os.path.join(script_dir, "tac.txt")
+        with open(tac_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(map(str, tac_code)))
+        
+        print("Generando codigo MIPS...")
+        from mips_generator import MIPSGen
+        # Convert TAC objects to strings for MIPSGen
+        tac_strings = [str(t) for t in tac_code]
+        mips_gen = MIPSGen(tac_strings)
+        mips_asm = mips_gen.translate()
+        mips_path = os.path.join(script_dir, "out.s")
+        with open(mips_path, "w", encoding="utf-8") as f:
+            f.write("# auto-generated MIPS from tac\n")
+            f.write(".text\n")
+            f.write(".globl main\n")
+            f.write(mips_asm)
+            f.write("\n")
+        print(f"MIPS guardado en: {mips_path}")
 
     # Generar imágenes PNG automáticamente
     print("Generando imágenes PNG...")

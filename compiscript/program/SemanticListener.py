@@ -88,8 +88,23 @@ class SemanticListener(CompiscriptListener):
 
         pname = parent.__class__.__name__
 
+        # Handle catch block exception variable
+        if pname == "TryCatchStatementContext":
+            # This is the catch block (second block in try-catch)
+            catch_var = parent.Identifier()
+            if catch_var:
+                id_tok = catch_var.getSymbol()
+                vname = id_tok.text
+                # Declare the catch variable as string type (or UNKNOWN if not specified)
+                vinfo = VarInfo(vname, STR, False, id_tok)
+                self.scopes.declare(vname, vinfo)
+                
+                if self.func_key_stack:
+                    self.symbtab.allocate_local(vinfo)
+                    self.func_locals[self.func_key_stack[-1]].add(vname)
         
-        if pname == "ForeachStatementContext":
+        # Handle foreach loop variable
+        elif pname == "ForeachStatementContext":
             id_tok = parent.Identifier().getSymbol()
             vname = id_tok.text
             seq_expr = parent.expression()
@@ -893,7 +908,8 @@ class SemanticListener(CompiscriptListener):
         self.func_locals.setdefault(key, set())
         self.func_captures.setdefault(key, set())
 
-        if key in self.funcs:
+        is_duplicate = key in self.funcs
+        if is_duplicate:
             self._err(ctx, f"Funcion '{fname}' redeclarada.")
         else:
             # Validaciones de override (igual que ya tienes)
@@ -929,7 +945,9 @@ class SemanticListener(CompiscriptListener):
 
             self.symbtab.enter_function(fname)
             self.funcs[key] = ([p.type for p in params_infos], ret_t)
-
+        
+        # Mark duplicate functions so we don't try to leave them
+        self.is_duplicate_func = is_duplicate
         self.func_ret_stack.append(ret_t)
 
 
@@ -941,6 +959,15 @@ class SemanticListener(CompiscriptListener):
                 return True
         return False
 
+    def enterTryCatchStatement(self, ctx):
+        """Declare catch variable in the catch block scope"""
+        # The catch block will push its own scope when entered
+        # We need to store the catch variable name to declare it when the catch block enters
+        catch_var = ctx.Identifier()
+        if catch_var:
+            # Store it temporarily so we can declare it in the catch block
+            self.pending_catch_var = catch_var.getSymbol()
+    
     def exitTryCatchStatement(self, ctx):
         
         blocks = ctx.block()
@@ -959,11 +986,12 @@ class SemanticListener(CompiscriptListener):
 
         self.func_key_stack.pop()
 
-        # Cierra function frame y scope
-        self.symbtab.leave_function()
-
-
-
+        # Only leave function if it wasn't a duplicate
+        if not getattr(self, 'is_duplicate_func', False):
+            # Cierra function frame y scope
+            self.symbtab.leave_function()
+        
+        self.is_duplicate_func = False
         self.func_ret_stack.pop()
 
 

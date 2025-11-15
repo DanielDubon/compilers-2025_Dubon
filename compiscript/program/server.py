@@ -160,30 +160,46 @@ def compile_code(source_code: str, output_format: str = "all"):
             res.errors = [res.stderr]
             return res
 
-        # construir comando usando el mismo intérprete de Python
-        cmd = [sys.executable, str(PROG_DIR / "Driver.py"), tmp_file.name]
-        # agregar flags según formato pedido
-        if output_format in ("all", "tac"):
-            cmd.append("--tac")
-        if output_format in ("all", "mips"):
-            cmd.append("--mips")
+        # construir y ejecutar Driver.py con los flags correctos
+        driver_cmd = [sys.executable, str(PROG_DIR / "Driver.py"), tmp_file.name]
+        # Driver supports --tac, --ast-dump and --ast-dot (not --mips)
+        if output_format in ("all", "tac", "mips"):
+            driver_cmd.append("--tac")
         if output_format in ("all", "ast"):
-            cmd.append("--ast")
+            driver_cmd.append("--ast-dump")
+        # always generate tac when mips requested
 
-        print("[server] Running:", " ".join(cmd))
-        cp = subprocess.run(cmd, cwd=str(PROG_DIR), capture_output=True, text=True, timeout=60)
+        print("[server] Running Driver:", " ".join(driver_cmd))
+        cp = subprocess.run(driver_cmd, cwd=str(PROG_DIR), capture_output=True, text=True, timeout=60)
 
         res.stdout = cp.stdout or ""
         res.stderr = cp.stderr or ""
 
-        # leer archivos de salida si existen
+        # leer TAC si fue generado
         tac_file = PROG_DIR / "tac.txt"
         if tac_file.exists():
             res.tac = tac_file.read_text()
 
+        # Si pidieron MIPS, invocar el mips_generator explícitamente
+        if output_format in ("all", "mips"):
+            # ensure tac exists
+            if tac_file.exists():
+                mips_cmd = [sys.executable, str(PROG_DIR / "mips_generator.py"), str(tac_file.name)]
+                print("[server] Running MIPS generator:", " ".join(mips_cmd))
+                mcp = subprocess.run(mips_cmd, cwd=str(PROG_DIR), capture_output=True, text=True, timeout=60)
+                # append any messages
+                if mcp.stdout:
+                    res.stdout += "\n" + mcp.stdout
+                if mcp.stderr:
+                    res.stderr += "\n" + mcp.stderr
+
+        # leer mips y ast si existen
         mips_file = PROG_DIR / "out.s"
         if mips_file.exists():
-            res.mips = mips_file.read_text()
+            try:
+                res.mips = mips_file.read_text()
+            except Exception:
+                res.mips = ""
 
         ast_file = PROG_DIR / "ast.txt"
         if ast_file.exists():
